@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>MV 創作追蹤器</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, "Segoe UI", "PingFang TC", "Microsoft JhengHei", sans-serif;
+    background: #121212;
+    color: #eee;
+    padding: 24px;
+  }
+  h1 { text-align: center; margin-bottom: 4px; }
+  .subtitle { text-align: center; color: #999; margin-bottom: 24px; font-size: 14px; }
+  .container { max-width: 720px; margin: 0 auto; }
+  .project-bar {
+    display: flex; gap: 8px; margin-bottom: 24px; flex-wrap: wrap;
+  }
+  select, input, textarea, button {
+    font-family: inherit; font-size: 14px;
+    background: #1e1e1e; color: #eee; border: 1px solid #333;
+    border-radius: 6px; padding: 8px 12px;
+  }
+  select { flex: 1; }
+  button {
+    cursor: pointer; background: #d97706; color: #111; border: none; font-weight: 600;
+  }
+  button:hover { background: #f59e0b; }
+  button.secondary { background: #2a2a2a; color: #eee; }
+  button.secondary:hover { background: #3a3a3a; }
+  .step {
+    background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 10px;
+    padding: 16px; margin-bottom: 14px; position: relative;
+  }
+  .step.done { border-color: #d97706; }
+  .step-title { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+  .step-num {
+    width: 26px; height: 26px; border-radius: 50%; background: #333;
+    display: flex; align-items: center; justify-content: center; font-size: 13px; flex-shrink: 0;
+  }
+  .step.done .step-num { background: #d97706; color: #111; }
+  .step-title h3 { margin: 0; font-size: 16px; flex: 1; }
+  textarea, input[type=text], input[type=url] { width: 100%; resize: vertical; min-height: 36px; }
+  textarea { min-height: 80px; }
+  .checkbox-row { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+  .checkbox-row input { width: auto; }
+  .status-bar { text-align: center; color: #999; font-size: 13px; margin-top: 16px; }
+  label { display: block; font-size: 12px; color: #999; margin: 8px 0 4px; }
+  a { color: #f59e0b; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>🎬 MV 創作追蹤器</h1>
+  <div class="subtitle">主題 → 歌詞 → 曲風 → Suno 編曲 → Grok 影片合成</div>
+
+  <div class="project-bar">
+    <select id="projectSelect"></select>
+    <button class="secondary" id="newProjectBtn">+ 新專案</button>
+    <button class="secondary" id="deleteProjectBtn">刪除</button>
+  </div>
+
+  <div id="newProjectForm" style="display:none; gap:8px; margin-bottom:24px;" class="project-bar">
+    <input id="newProjectName" type="text" placeholder="這個 MV 專案叫什麼名字？" style="flex:1;" />
+    <button id="confirmNewProjectBtn">建立</button>
+    <button class="secondary" id="cancelNewProjectBtn">取消</button>
+  </div>
+
+  <div id="confirmDeleteForm" style="display:none; gap:8px; margin-bottom:24px; align-items:center;" class="project-bar">
+    <span style="color:#f59e0b;">確定要刪除這個專案嗎？此動作無法復原。</span>
+    <button id="confirmDeleteBtn">確定刪除</button>
+    <button class="secondary" id="cancelDeleteBtn">取消</button>
+  </div>
+
+  <div id="steps"></div>
+
+  <div class="status-bar" id="statusBar">載入中...</div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
+import {
+  getFirestore, collection, doc, setDoc, getDoc, getDocs, deleteDoc, onSnapshot, serverTimestamp
+} from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  projectId: "my-teaching-tools-77014",
+  appId: "1:481324807967:web:45ddd27a77cc6b127ae22a",
+  storageBucket: "my-teaching-tools-77014.firebasestorage.app",
+  apiKey: "AIzaSyDkKK9qKfne8HqrnA_efseOPYAyQihC2ns",
+  authDomain: "my-teaching-tools-77014.firebaseapp.com",
+  messagingSenderId: "481324807967"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const COL = "mv_projects";
+
+const STEPS = [
+  { key: "theme", title: "1. 想主題", type: "textarea", placeholder: "這首歌想表達什麼？想唱給誰聽？" },
+  { key: "lyrics", title: "2. 寫歌詞", type: "textarea", placeholder: "貼上或寫下歌詞草稿..." },
+  { key: "genre", title: "3. 找曲風並確定曲風", type: "text", placeholder: "例如：city pop、抒情民謠、電子舞曲..." },
+  { key: "suno", title: "4. 輸入 Suno 產生歌曲", type: "url", placeholder: "貼 Suno 歌曲連結" },
+  { key: "mv", title: "5. 下載歌曲 + Grok 影片合成 MV", type: "url", placeholder: "貼最終 MV 連結或檔案位置" },
+];
+
+let currentId = null;
+let unsub = null;
+
+const projectSelect = document.getElementById("projectSelect");
+const stepsEl = document.getElementById("steps");
+const statusBar = document.getElementById("statusBar");
+
+function renderSteps(data = {}) {
+  stepsEl.innerHTML = "";
+  STEPS.forEach(step => {
+    const value = data[step.key] || "";
+    const isDone = !!(data[step.key + "_done"]);
+    const wrapper = document.createElement("div");
+    wrapper.className = "step" + (isDone ? " done" : "");
+
+    const idx = STEPS.indexOf(step) + 1;
+    const inputId = "input_" + step.key;
+    const checkId = "check_" + step.key;
+
+    wrapper.innerHTML = `
+      <div class="step-title">
+        <div class="step-num">${idx}</div>
+        <h3>${step.title}</h3>
+      </div>
+      <label>${step.placeholder}</label>
+      ${step.type === "textarea"
+        ? `<textarea id="${inputId}" placeholder="${step.placeholder}">${value}</textarea>`
+        : `<input id="${inputId}" type="${step.type}" placeholder="${step.placeholder}" value="${value.replace(/"/g, '&quot;')}" />`
+      }
+      <div class="checkbox-row">
+        <input type="checkbox" id="${checkId}" ${isDone ? "checked" : ""} />
+        <label for="${checkId}" style="margin:0;color:#ccc;">這步完成了</label>
+      </div>
+    `;
+    stepsEl.appendChild(wrapper);
+
+    const inputEl = wrapper.querySelector("#" + inputId);
+    const checkEl = wrapper.querySelector("#" + checkId);
+    let saveTimer = null;
+    const save = () => {
+      clearTimeout(saveTimer);
+      saveTimer = setTimeout(() => saveField(step.key, inputEl.value, checkEl.checked), 500);
+    };
+    inputEl.addEventListener("input", save);
+    checkEl.addEventListener("change", () => saveField(step.key, inputEl.value, checkEl.checked));
+  });
+}
+
+async function saveField(key, value, done) {
+  if (!currentId) return;
+  statusBar.textContent = "儲存中...";
+  await setDoc(doc(db, COL, currentId), {
+    [key]: value,
+    [key + "_done"]: done,
+    updatedAt: serverTimestamp()
+  }, { merge: true });
+  statusBar.textContent = "已自動儲存 ✅";
+}
+
+async function loadProjects() {
+  const snap = await getDocs(collection(db, COL));
+  projectSelect.innerHTML = "";
+  if (snap.empty) {
+    const opt = document.createElement("option");
+    opt.textContent = "（尚無專案，點「+ 新專案」開始）";
+    projectSelect.appendChild(opt);
+    stepsEl.innerHTML = "";
+    statusBar.textContent = "請先新增一個專案";
+    return;
+  }
+  snap.forEach(d => {
+    const opt = document.createElement("option");
+    opt.value = d.id;
+    opt.textContent = d.data().name || d.id;
+    projectSelect.appendChild(opt);
+  });
+  selectProject(snap.docs[0].id);
+}
+
+function selectProject(id) {
+  currentId = id;
+  projectSelect.value = id;
+  if (unsub) unsub();
+  unsub = onSnapshot(doc(db, COL, id), (snap) => {
+    renderSteps(snap.data() || {});
+    statusBar.textContent = "已同步";
+  });
+}
+
+projectSelect.addEventListener("change", () => selectProject(projectSelect.value));
+
+const newProjectForm = document.getElementById("newProjectForm");
+const newProjectName = document.getElementById("newProjectName");
+const confirmDeleteForm = document.getElementById("confirmDeleteForm");
+
+document.getElementById("newProjectBtn").addEventListener("click", () => {
+  confirmDeleteForm.style.display = "none";
+  newProjectForm.style.display = "flex";
+  newProjectName.value = "";
+  newProjectName.focus();
+});
+
+document.getElementById("cancelNewProjectBtn").addEventListener("click", () => {
+  newProjectForm.style.display = "none";
+});
+
+async function createProject() {
+  const name = newProjectName.value.trim();
+  if (!name) { newProjectName.focus(); return; }
+  const id = "mv_" + Date.now();
+  await setDoc(doc(db, COL, id), { name, createdAt: serverTimestamp() });
+  newProjectForm.style.display = "none";
+  await loadProjects();
+  selectProject(id);
+}
+
+document.getElementById("confirmNewProjectBtn").addEventListener("click", createProject);
+newProjectName.addEventListener("keydown", (e) => { if (e.key === "Enter") createProject(); });
+
+document.getElementById("deleteProjectBtn").addEventListener("click", () => {
+  if (!currentId) return;
+  newProjectForm.style.display = "none";
+  confirmDeleteForm.style.display = "flex";
+});
+
+document.getElementById("cancelDeleteBtn").addEventListener("click", () => {
+  confirmDeleteForm.style.display = "none";
+});
+
+document.getElementById("confirmDeleteBtn").addEventListener("click", async () => {
+  if (!currentId) return;
+  await deleteDoc(doc(db, COL, currentId));
+  currentId = null;
+  confirmDeleteForm.style.display = "none";
+  await loadProjects();
+});
+
+loadProjects();
+</script>
+</body>
+</html>
