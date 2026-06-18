@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>影音教學 Agent 工作室</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, "Segoe UI", "PingFang TC", "Microsoft JhengHei", sans-serif;
+    background: #0f0f13;
+    color: #eee;
+    padding: 24px;
+  }
+  h1 { text-align: center; margin-bottom: 4px; font-size: 22px; }
+  .subtitle { text-align: center; color: #888; margin-bottom: 28px; font-size: 13px; }
+  .container { max-width: 800px; margin: 0 auto; }
+
+  /* Pipeline header */
+  .pipeline {
+    display: flex; align-items: center; justify-content: center;
+    gap: 6px; margin-bottom: 32px; flex-wrap: wrap;
+  }
+  .agent-badge {
+    padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: 600;
+    border: 1px solid #333; color: #999; background: #1a1a1a;
+    cursor: default;
+  }
+  .agent-badge.active { background: #1e3a2f; border-color: #2d9c6e; color: #4ade9c; }
+  .agent-badge.done { background: #1a2a1a; border-color: #2a5a2a; color: #6bcf6b; }
+  .arrow { color: #444; font-size: 18px; }
+
+  /* Project bar */
+  .project-bar { display: flex; gap: 8px; margin-bottom: 24px; flex-wrap: wrap; }
+  select, input, textarea, button {
+    font-family: inherit; font-size: 14px;
+    background: #1e1e1e; color: #eee; border: 1px solid #333;
+    border-radius: 6px; padding: 8px 12px;
+  }
+  select { flex: 1; }
+  button { cursor: pointer; background: #2d9c6e; color: #fff; border: none; font-weight: 600; }
+  button:hover { background: #38c47f; }
+  button.secondary { background: #2a2a2a; color: #eee; }
+  button.secondary:hover { background: #3a3a3a; }
+  button:disabled { opacity: 0.4; cursor: not-allowed; background: #2a2a2a; }
+
+  /* Sections */
+  .section {
+    background: #161620; border: 1px solid #252530; border-radius: 12px;
+    padding: 20px; margin-bottom: 18px;
+  }
+  .section-title {
+    display: flex; align-items: center; gap: 10px; margin-bottom: 16px;
+  }
+  .agent-tag {
+    font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 4px;
+    background: #1e3a2f; color: #4ade9c; border: 1px solid #2d9c6e;
+    letter-spacing: 0.5px;
+  }
+  .section-title h2 { margin: 0; font-size: 16px; }
+
+  label { display: block; font-size: 12px; color: #888; margin: 10px 0 4px; }
+  input[type=text], textarea, select { width: 100%; }
+  textarea { resize: vertical; min-height: 80px; }
+
+  .row { display: flex; gap: 12px; }
+  .row > div { flex: 1; }
+
+  /* Script output */
+  .script-output {
+    background: #0c0c10; border: 1px solid #2d9c6e; border-radius: 8px;
+    padding: 16px; min-height: 120px; white-space: pre-wrap;
+    font-size: 13px; line-height: 1.7; color: #cde8da;
+    display: none;
+  }
+  .script-output.visible { display: block; }
+
+  /* Segment cards */
+  .segments { display: none; }
+  .segments.visible { display: block; }
+  .segment {
+    background: #12121a; border: 1px solid #252530; border-radius: 8px;
+    padding: 14px; margin-bottom: 10px;
+  }
+  .segment-header {
+    display: flex; align-items: center; gap: 8px; margin-bottom: 8px;
+  }
+  .seg-num {
+    width: 22px; height: 22px; border-radius: 50%; background: #2d9c6e;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 700; color: #fff; flex-shrink: 0;
+  }
+  .seg-title { font-weight: 600; font-size: 14px; flex: 1; }
+  .seg-time { font-size: 12px; color: #666; }
+  .seg-text { font-size: 13px; color: #bbb; line-height: 1.6; }
+  .seg-notes { font-size: 12px; color: #666; margin-top: 6px; font-style: italic; }
+
+  /* Voice section */
+  .voice-controls { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .voice-status {
+    font-size: 13px; color: #888;
+    background: #1a1a1a; border-radius: 6px; padding: 8px 14px; flex: 1;
+  }
+  audio { width: 100%; margin-top: 10px; display: none; }
+  audio.visible { display: block; }
+
+  /* Video section */
+  .step-list { list-style: none; padding: 0; margin: 0; }
+  .step-list li {
+    display: flex; align-items: flex-start; gap: 10px;
+    padding: 10px 0; border-bottom: 1px solid #1e1e28; font-size: 13px;
+  }
+  .step-list li:last-child { border-bottom: none; }
+  .step-icon { font-size: 18px; flex-shrink: 0; margin-top: 1px; }
+
+  /* Status */
+  .status-bar { text-align: center; color: #666; font-size: 13px; margin-top: 16px; }
+  .generating { color: #f59e0b; animation: pulse 1s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
+
+  /* Inline form */
+  .inline-form {
+    display: none; gap: 8px; margin-bottom: 16px;
+    align-items: center; flex-wrap: wrap;
+  }
+  .inline-form.visible { display: flex; }
+  .inline-form input { flex: 1; }
+
+  .copy-btn {
+    font-size: 12px; padding: 4px 10px; background: #1e3a2f;
+    border: 1px solid #2d9c6e; color: #4ade9c;
+  }
+  .copy-btn:hover { background: #254a38; }
+  a { color: #4ade9c; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>🎬 影音教學 Agent 工作室</h1>
+  <div class="subtitle">Agent A 腳本 → Agent B 語音 → Agent C 影片</div>
+
+  <div class="pipeline">
+    <div class="agent-badge active" id="badge-a">A 腳本生成</div>
+    <div class="arrow">→</div>
+    <div class="agent-badge" id="badge-b">B 語音旁白</div>
+    <div class="arrow">→</div>
+    <div class="agent-badge" id="badge-c">C 影片合成</div>
+  </div>
+
+  <!-- Project bar -->
+  <div class="project-bar">
+    <select id="projectSelect"></select>
+    <button class="secondary" id="newProjectBtn">+ 新專案</button>
+    <button class="secondary" id="deleteProjectBtn">刪除</button>
+  </div>
+  <div class="inline-form" id="newProjectForm">
+    <input id="newProjectName" type="text" placeholder="這堂課叫什麼名字？" />
+    <button id="confirmNewBtn">建立</button>
+    <button class="secondary" id="cancelNewBtn">取消</button>
+  </div>
+  <div class="inline-form" id="confirmDeleteForm" style="color:#f59e0b;">
+    <span style="flex:1;">確定刪除此專案？無法復原。</span>
+    <button id="confirmDeleteBtn">確定</button>
+    <button class="secondary" id="cancelDeleteBtn">取消</button>
+  </div>
+
+  <!-- Agent A: Script -->
+  <div class="section" id="sectionA">
+    <div class="section-title">
+      <span class="agent-tag">AGENT A</span>
+      <h2>腳本生成</h2>
+    </div>
+
+    <div class="row">
+      <div>
+        <label>教學主題</label>
+        <input type="text" id="topic" placeholder="例如：什麼是 AI Agent？" />
+      </div>
+      <div>
+        <label>目標受眾</label>
+        <input type="text" id="audience" placeholder="例如：完全沒接觸過 AI 的退休人士" />
+      </div>
+    </div>
+
+    <div class="row" style="margin-top:0;">
+      <div>
+        <label>影片長度</label>
+        <select id="duration">
+          <option value="3">3 分鐘（入門快講）</option>
+          <option value="5" selected>5 分鐘（標準教學）</option>
+          <option value="8">8 分鐘（深入解說）</option>
+          <option value="12">12 分鐘（完整課程）</option>
+        </select>
+      </div>
+      <div>
+        <label>語氣風格</label>
+        <select id="style">
+          <option value="friendly">親切口語（適合長輩）</option>
+          <option value="professional">專業正式</option>
+          <option value="storytelling">說故事型</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="row" style="margin-top:0;">
+      <div>
+        <label>補充說明（可空）</label>
+        <textarea id="extraNotes" placeholder="有沒有特別要強調的重點？要避免的術語？"></textarea>
+      </div>
+      <div>
+        <label>Gemini API Key <span style="color:#666;">（存在瀏覽器，不會上傳）</span></label>
+        <input type="password" id="geminiKey" placeholder="貼入你的 Gemini API Key" />
+      </div>
+    </div>
+
+    <div style="margin-top:14px; display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+      <button id="generateBtn">✨ Agent A：生成腳本</button>
+      <button class="secondary copy-btn" id="copyScriptBtn" style="display:none;">複製腳本</button>
+    </div>
+
+    <div id="scriptRaw" class="script-output" style="margin-top:14px;"></div>
+    <div id="segments" class="segments" style="margin-top:14px;"></div>
+  </div>
+
+  <!-- Agent B: Voice -->
+  <div class="section" id="sectionB" style="opacity:0.4; pointer-events:none;">
+    <div class="section-title">
+      <span class="agent-tag">AGENT B</span>
+      <h2>語音旁白生成</h2>
+    </div>
+
+    <div class="row">
+      <div>
+        <label>語音 API</label>
+        <select id="voiceApi">
+          <option value="elevenlabs">ElevenLabs（推薦，音質最佳）</option>
+          <option value="fishaudio">Fish Audio（支援中文聲音克隆）</option>
+          <option value="gtts">Google TTS（免費，音質普通）</option>
+        </select>
+      </div>
+      <div>
+        <label>ElevenLabs API Key</label>
+        <input type="password" id="elevenLabsKey" placeholder="sk-..." />
+      </div>
+    </div>
+
+    <div class="voice-controls" style="margin-top:14px;">
+      <button id="generateVoiceBtn" disabled>🎙️ Agent B：生成旁白</button>
+      <div class="voice-status" id="voiceStatus">請先完成 Agent A 腳本生成</div>
+    </div>
+    <audio id="audioPlayer" controls></audio>
+  </div>
+
+  <!-- Agent C: Video -->
+  <div class="section" id="sectionC" style="opacity:0.4; pointer-events:none;">
+    <div class="section-title">
+      <span class="agent-tag">AGENT C</span>
+      <h2>影片合成</h2>
+    </div>
+
+    <ul class="step-list">
+      <li>
+        <span class="step-icon">📄</span>
+        <div>
+          <strong>腳本 → 簡報頁面</strong><br>
+          <span style="color:#666;">每個段落自動轉為投影片（使用 Remotion 或 Canva API）</span>
+        </div>
+      </li>
+      <li>
+        <span class="step-icon">🔊</span>
+        <div>
+          <strong>簡報 + 旁白 → MP4</strong><br>
+          <span style="color:#666;">Agent B 產生的音訊與投影片同步合成</span>
+        </div>
+      </li>
+      <li>
+        <span class="step-icon">☁️</span>
+        <div>
+          <strong>自動上傳 Google Drive</strong><br>
+          <span style="color:#666;">完成後直接存入雲端，分享連結一鍵複製</span>
+        </div>
+      </li>
+    </ul>
+
+    <div style="margin-top:14px; padding:12px; background:#1a1a10; border-radius:8px; border:1px solid #3a3a20;">
+      <div style="font-size:13px; color:#c9b54a;">
+        ⚠️ Agent C 目前為規劃階段。<br>
+        需要先安裝 <a href="https://remotion.dev" target="_blank">Remotion</a>（Node.js 套件）並設定 Google Drive API。<br>
+        完成 Agent A + B 後再來設定。
+      </div>
+    </div>
+
+    <div style="margin-top:12px; display:flex; gap:8px;">
+      <button id="generateVideoBtn" disabled>🎬 Agent C：合成影片</button>
+    </div>
+  </div>
+
+  <div class="status-bar" id="statusBar">請先新增或選擇一個教學專案</div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
+import {
+  getFirestore, collection, doc, setDoc, getDocs, deleteDoc, onSnapshot, serverTimestamp
+} from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  projectId: "my-teaching-tools-77014",
+  appId: "1:481324807967:web:45ddd27a77cc6b127ae22a",
+  storageBucket: "my-teaching-tools-77014.firebasestorage.app",
+  apiKey: "AIzaSyDkKK9qKfne8HqrnA_efseOPYAyQihC2ns",
+  authDomain: "my-teaching-tools-77014.firebaseapp.com",
+  messagingSenderId: "481324807967"
+};
+
+let GEMINI_API_KEY = localStorage.getItem("gemini_api_key") || "";
+const getGeminiUrl = () => `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const COL = "edu_video_projects";
+
+let currentId = null;
+let unsub = null;
+let parsedSegments = [];
+let scriptReady = false;
+
+// UI refs
+const projectSelect = document.getElementById("projectSelect");
+const statusBar = document.getElementById("statusBar");
+const generateBtn = document.getElementById("generateBtn");
+const scriptRaw = document.getElementById("scriptRaw");
+const segmentsEl = document.getElementById("segments");
+const copyScriptBtn = document.getElementById("copyScriptBtn");
+const generateVoiceBtn = document.getElementById("generateVoiceBtn");
+const voiceStatus = document.getElementById("voiceStatus");
+const audioPlayer = document.getElementById("audioPlayer");
+const sectionB = document.getElementById("sectionB");
+const sectionC = document.getElementById("sectionC");
+
+// --- Project management ---
+async function loadProjects() {
+  const snap = await getDocs(collection(db, COL));
+  projectSelect.innerHTML = "";
+  if (snap.empty) {
+    const opt = document.createElement("option");
+    opt.textContent = "（尚無專案，點「+ 新專案」開始）";
+    projectSelect.appendChild(opt);
+    statusBar.textContent = "請先新增一個教學專案";
+    return;
+  }
+  snap.forEach(d => {
+    const opt = document.createElement("option");
+    opt.value = d.id;
+    opt.textContent = d.data().name || d.id;
+    projectSelect.appendChild(opt);
+  });
+  selectProject(snap.docs[0].id);
+}
+
+function selectProject(id) {
+  currentId = id;
+  projectSelect.value = id;
+  if (unsub) unsub();
+  unsub = onSnapshot(doc(db, COL, id), snap => {
+    const data = snap.data() || {};
+    restoreForm(data);
+    if (data.script) {
+      showScript(data.script, data.segments || []);
+      scriptReady = true;
+      unlockSectionB();
+    }
+    statusBar.textContent = "已同步";
+  });
+}
+
+function restoreForm(data) {
+  document.getElementById("topic").value = data.topic || "";
+  document.getElementById("audience").value = data.audience || "";
+  document.getElementById("duration").value = data.duration || "5";
+  document.getElementById("style").value = data.style || "friendly";
+  document.getElementById("extraNotes").value = data.extraNotes || "";
+}
+
+projectSelect.addEventListener("change", () => selectProject(projectSelect.value));
+
+// New project
+const newProjectForm = document.getElementById("newProjectForm");
+const newProjectName = document.getElementById("newProjectName");
+document.getElementById("newProjectBtn").addEventListener("click", () => {
+  newProjectForm.classList.add("visible");
+  document.getElementById("confirmDeleteForm").classList.remove("visible");
+  newProjectName.value = "";
+  newProjectName.focus();
+});
+document.getElementById("cancelNewBtn").addEventListener("click", () => {
+  newProjectForm.classList.remove("visible");
+});
+async function createProject() {
+  const name = newProjectName.value.trim();
+  if (!name) { newProjectName.focus(); return; }
+  const id = "edu_" + Date.now();
+  await setDoc(doc(db, COL, id), { name, createdAt: serverTimestamp() });
+  newProjectForm.classList.remove("visible");
+  await loadProjects();
+  selectProject(id);
+}
+document.getElementById("confirmNewBtn").addEventListener("click", createProject);
+newProjectName.addEventListener("keydown", e => { if (e.key === "Enter") createProject(); });
+
+// Delete project
+const confirmDeleteForm = document.getElementById("confirmDeleteForm");
+document.getElementById("deleteProjectBtn").addEventListener("click", () => {
+  if (!currentId) return;
+  newProjectForm.classList.remove("visible");
+  confirmDeleteForm.classList.add("visible");
+});
+document.getElementById("cancelDeleteBtn").addEventListener("click", () => {
+  confirmDeleteForm.classList.remove("visible");
+});
+document.getElementById("confirmDeleteBtn").addEventListener("click", async () => {
+  if (!currentId) return;
+  await deleteDoc(doc(db, COL, currentId));
+  currentId = null;
+  confirmDeleteForm.classList.remove("visible");
+  scriptRaw.classList.remove("visible");
+  segmentsEl.classList.remove("visible");
+  copyScriptBtn.style.display = "none";
+  scriptReady = false;
+  lockSectionB();
+  await loadProjects();
+});
+
+// --- Agent A: Script Generation ---
+generateBtn.addEventListener("click", async () => {
+  if (!currentId) { statusBar.textContent = "請先選擇或新增一個專案"; return; }
+
+  const topic = document.getElementById("topic").value.trim();
+  const audience = document.getElementById("audience").value.trim();
+  const duration = document.getElementById("duration").value;
+  const style = document.getElementById("style").value;
+  const extraNotes = document.getElementById("extraNotes").value.trim();
+
+  if (!topic) { document.getElementById("topic").focus(); return; }
+
+  // Save form state
+  await setDoc(doc(db, COL, currentId), { topic, audience, duration, style, extraNotes, updatedAt: serverTimestamp() }, { merge: true });
+
+  const styleMap = {
+    friendly: "親切口語、簡單易懂、適合完全沒有 AI 背景的退休人士，避免英文術語，遇到專有名詞立刻用生活比喻解釋",
+    professional: "專業正式、條理清晰、適合有基礎知識的成年人",
+    storytelling: "說故事型、用情境和案例帶出概念、富有畫面感"
+  };
+
+  const prompt = `你是一位專業的教學影片腳本作家。請為以下教學影片生成一份完整的旁白腳本。
+
+【教學主題】${topic}
+【目標受眾】${audience || "一般成年人"}
+【影片長度】${duration} 分鐘
+【語氣風格】${styleMap[style]}
+${extraNotes ? `【補充說明】${extraNotes}` : ""}
+
+請輸出 JSON 格式，結構如下（只輸出 JSON，不要加 markdown code block）：
+{
+  "title": "影片標題",
+  "totalMinutes": ${duration},
+  "segments": [
+    {
+      "id": 1,
+      "title": "段落標題",
+      "durationSec": 秒數（整數）,
+      "script": "這裡是完整的旁白文字，觀眾聽到的就是這段話。請用自然口語，不要有條列符號。",
+      "visualNote": "畫面建議：這個段落建議搭配什麼畫面或動畫"
+    }
+  ]
+}
+
+要求：
+1. segments 的 durationSec 總和必須接近 ${duration * 60} 秒
+2. 每段旁白要完整自然，唸出來就是影片旁白
+3. 第一段必須是「開場」（30秒內），最後一段必須是「結語與行動呼籲」
+4. 使用繁體中文`;
+
+  generateBtn.disabled = true;
+  generateBtn.textContent = "⏳ 生成中...";
+  statusBar.className = "status-bar generating";
+  statusBar.textContent = "Agent A 正在生成腳本，請稍候...";
+  scriptRaw.classList.remove("visible");
+  segmentsEl.classList.remove("visible");
+
+  try {
+    GEMINI_API_KEY = document.getElementById("geminiKey").value.trim();
+    if (!GEMINI_API_KEY) { document.getElementById("geminiKey").focus(); statusBar.textContent = "⚠️ 請輸入 Gemini API Key"; return; }
+    localStorage.setItem("gemini_api_key", GEMINI_API_KEY);
+    const res = await fetch(getGeminiUrl(), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: { temperature: 0.7, maxOutputTokens: 4096 }
+      })
+    });
+    const json = await res.json();
+    const text = json.candidates?.[0]?.content?.parts?.[0]?.text || "";
+
+    let parsed;
+    try {
+      // Strip possible markdown fences
+      const clean = text.replace(/```json?\n?/g, "").replace(/```/g, "").trim();
+      parsed = JSON.parse(clean);
+    } catch {
+      // Fallback: show raw
+      scriptRaw.textContent = text;
+      scriptRaw.classList.add("visible");
+      statusBar.className = "status-bar";
+      statusBar.textContent = "腳本已生成（JSON 解析失敗，顯示原始文字）";
+      return;
+    }
+
+    parsedSegments = parsed.segments || [];
+    await setDoc(doc(db, COL, currentId), {
+      script: JSON.stringify(parsed),
+      segments: parsedSegments,
+      scriptTitle: parsed.title,
+      updatedAt: serverTimestamp()
+    }, { merge: true });
+
+    showScript(JSON.stringify(parsed), parsedSegments);
+    scriptReady = true;
+    unlockSectionB();
+    statusBar.className = "status-bar";
+    statusBar.textContent = `✅ 腳本「${parsed.title}」生成完成，共 ${parsedSegments.length} 段`;
+  } catch (err) {
+    statusBar.className = "status-bar";
+    statusBar.textContent = "❌ 生成失敗：" + err.message;
+  } finally {
+    generateBtn.disabled = false;
+    generateBtn.textContent = "✨ Agent A：生成腳本";
+  }
+});
+
+function showScript(scriptStr, segs) {
+  let segments = segs;
+  if (!segments || segments.length === 0) {
+    try { segments = JSON.parse(scriptStr).segments || []; } catch {}
+  }
+  parsedSegments = segments;
+  renderSegments(segments);
+  segmentsEl.classList.add("visible");
+  copyScriptBtn.style.display = "inline-block";
+}
+
+function renderSegments(segs) {
+  segmentsEl.innerHTML = "";
+  segs.forEach((seg, i) => {
+    const card = document.createElement("div");
+    card.className = "segment";
+    card.innerHTML = `
+      <div class="segment-header">
+        <div class="seg-num">${seg.id || i+1}</div>
+        <div class="seg-title">${seg.title}</div>
+        <div class="seg-time">${seg.durationSec}秒</div>
+      </div>
+      <div class="seg-text">${seg.script}</div>
+      ${seg.visualNote ? `<div class="seg-notes">🎥 ${seg.visualNote}</div>` : ""}
+    `;
+    segmentsEl.appendChild(card);
+  });
+}
+
+copyScriptBtn.addEventListener("click", () => {
+  const text = parsedSegments.map((s, i) =>
+    `【第${i+1}段：${s.title}（${s.durationSec}秒）】\n${s.script}`
+  ).join("\n\n");
+  navigator.clipboard.writeText(text).then(() => {
+    copyScriptBtn.textContent = "✅ 已複製";
+    setTimeout(() => { copyScriptBtn.textContent = "複製腳本"; }, 2000);
+  });
+});
+
+// --- Agent B: Voice (placeholder with ElevenLabs integration) ---
+function unlockSectionB() {
+  sectionB.style.opacity = "1";
+  sectionB.style.pointerEvents = "auto";
+  generateVoiceBtn.disabled = false;
+  voiceStatus.textContent = "腳本已就緒，可以生成語音旁白";
+  document.getElementById("badge-b").classList.add("active");
+}
+function lockSectionB() {
+  sectionB.style.opacity = "0.4";
+  sectionB.style.pointerEvents = "none";
+  generateVoiceBtn.disabled = true;
+  voiceStatus.textContent = "請先完成 Agent A 腳本生成";
+}
+
+generateVoiceBtn.addEventListener("click", async () => {
+  const apiKey = document.getElementById("elevenLabsKey").value.trim();
+  const api = document.getElementById("voiceApi").value;
+
+  if (!scriptReady || parsedSegments.length === 0) {
+    voiceStatus.textContent = "⚠️ 請先生成腳本";
+    return;
+  }
+
+  if (api === "elevenlabs") {
+    if (!apiKey) {
+      document.getElementById("elevenLabsKey").focus();
+      voiceStatus.textContent = "⚠️ 請輸入 ElevenLabs API Key";
+      return;
+    }
+    voiceStatus.textContent = "🎙️ 呼叫 ElevenLabs API...";
+    generateVoiceBtn.disabled = true;
+
+    // Combine all segments into one script
+    const fullText = parsedSegments.map(s => s.script).join("\n\n");
+
+    try {
+      const res = await fetch("https://api.elevenlabs.io/v1/text-to-speech/21m00Tcm4TlvDq8ikWAM", {
+        method: "POST",
+        headers: {
+          "xi-api-key": apiKey,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          text: fullText,
+          model_id: "eleven_multilingual_v2",
+          voice_settings: { stability: 0.5, similarity_boost: 0.75 }
+        })
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.detail?.message || "API 錯誤");
+      }
+
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      audioPlayer.src = url;
+      audioPlayer.classList.add("visible");
+      voiceStatus.textContent = "✅ 旁白生成完成，可以播放";
+      document.getElementById("badge-c").classList.add("active");
+      sectionC.style.opacity = "1";
+      sectionC.style.pointerEvents = "auto";
+      document.getElementById("generateVideoBtn").disabled = false;
+    } catch (err) {
+      voiceStatus.textContent = "❌ 生成失敗：" + err.message;
+    } finally {
+      generateVoiceBtn.disabled = false;
+    }
+  } else {
+    voiceStatus.textContent = "⚠️ 目前僅支援 ElevenLabs，Fish Audio 和 Google TTS 整合開發中";
+  }
+});
+
+// --- Agent C placeholder ---
+document.getElementById("generateVideoBtn").addEventListener("click", () => {
+  statusBar.textContent = "🚧 Agent C 影片合成功能開發中，敬請期待";
+});
+
+// Restore saved Gemini key
+const savedKey = localStorage.getItem("gemini_api_key");
+if (savedKey) document.getElementById("geminiKey").value = savedKey;
+
+loadProjects();
+</script>
+</body>
+</html>
