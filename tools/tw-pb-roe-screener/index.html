@@ -129,12 +129,32 @@ function num(v) {
   return n;
 }
 
+// 證交所 OpenAPI 沒有對瀏覽器開放 CORS，直接 fetch 會被瀏覽器擋下，
+// 所以先試直連，失敗再依序透過公開 CORS 代理轉發（純轉發公開資料，不含任何帳密）。
+function corsCandidates(url) {
+  return [
+    url,
+    'https://api.allorigins.win/raw?url=' + encodeURIComponent(url),
+    'https://corsproxy.io/?url=' + encodeURIComponent(url),
+    'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(url),
+  ];
+}
+
 async function fetchJSON(url) {
-  const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
-  if (!res.ok) throw new Error(`${url} 回應 HTTP ${res.status}`);
-  const data = await res.json();
-  if (!Array.isArray(data)) throw new Error(`${url} 回傳格式不是陣列，可能是 API 有變動`);
-  return data;
+  const candidates = corsCandidates(url);
+  let lastErr;
+  for (const attemptUrl of candidates) {
+    try {
+      const res = await fetch(attemptUrl, { headers: { 'Accept': 'application/json' } });
+      if (!res.ok) { lastErr = new Error(`${attemptUrl} 回應 HTTP ${res.status}`); continue; }
+      const data = await res.json();
+      if (!Array.isArray(data)) { lastErr = new Error(`${attemptUrl} 回傳格式不是陣列，可能是 API 或代理服務有變動`); continue; }
+      return data;
+    } catch (e) {
+      lastErr = new Error(`${attemptUrl} 失敗：${e.message}`);
+    }
+  }
+  throw new Error(`所有連線方式都失敗（已嘗試直連與 ${candidates.length - 1} 個 CORS 代理）。最後錯誤：${lastErr?.message}`);
 }
 
 function linreg(points) {
@@ -276,8 +296,8 @@ scanBtn.addEventListener('click', async () => {
     console.error(err);
     setStatus(
       '掃描失敗：' + err.message +
-      '\n\n若是 CORS 或連線錯誤，代表瀏覽器無法直接呼叫證交所 API，' +
-      '可改用有網路存取權限的環境執行同樣邏輯的 Python/Node 腳本，或改由伺服器端代理。',
+      '\n\n直連與所有 CORS 代理都失敗，可能是代理服務暫時額滿/離線，或你的網路（公司網路、防火牆）擋掉了這些網域。' +
+      '可以稍後重試，或檢查網路環境是否會擋 allorigins.win / corsproxy.io / codetabs.com。',
       true
     );
   } finally {
