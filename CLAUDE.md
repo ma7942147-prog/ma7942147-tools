@@ -16,7 +16,9 @@
 
 ## 工具清單
 （之後加新工具時會自動更新）
-- （尚無）
+- `tools/mv-creator`：MV 創作追蹤器
+- `tools/edu-video-maker`：教學影片製作工具
+- `tools/tw-pb-roe-screener`：台股 P/B-ROE 合理股價篩選器（掃描全部上市股票，用 P/B~ROE 全市場迴歸模型算合理股價，篩出現價低於合理股價的股票）
 
 ## 工作注意事項
 - 個人資料一律去識別化

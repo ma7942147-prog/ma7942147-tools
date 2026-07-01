@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>台股 P/B-ROE 篩選器</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, "Segoe UI", "PingFang TC", "Microsoft JhengHei", sans-serif;
+    background: #121212;
+    color: #eee;
+    padding: 24px;
+  }
+  h1 { text-align: center; margin-bottom: 4px; }
+  .subtitle { text-align: center; color: #999; margin-bottom: 24px; font-size: 14px; }
+  .container { max-width: 1100px; margin: 0 auto; }
+  .panel {
+    background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 10px;
+    padding: 16px 20px; margin-bottom: 16px;
+  }
+  .panel h2 { font-size: 15px; margin: 0 0 8px; color: #f59e0b; }
+  .panel p, .panel li { font-size: 13px; color: #bbb; line-height: 1.7; }
+  .controls { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  button {
+    cursor: pointer; background: #d97706; color: #111; border: none; font-weight: 600;
+    font-size: 14px; padding: 10px 18px; border-radius: 6px;
+  }
+  button:hover:not(:disabled) { background: #f59e0b; }
+  button:disabled { background: #444; color: #888; cursor: not-allowed; }
+  button.secondary { background: #2a2a2a; color: #eee; }
+  button.secondary:hover:not(:disabled) { background: #3a3a3a; }
+  label { font-size: 13px; color: #999; }
+  input[type=number] {
+    width: 70px; background: #1e1e1e; color: #eee; border: 1px solid #333;
+    border-radius: 6px; padding: 6px 8px; font-size: 13px;
+  }
+  #status { font-size: 13px; color: #999; margin-top: 10px; min-height: 18px; white-space: pre-wrap; }
+  #status.error { color: #f87171; }
+  #summary { font-size: 13px; color: #ccc; margin-top: 10px; line-height: 1.8; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 12px; }
+  th, td { padding: 7px 10px; text-align: right; border-bottom: 1px solid #2a2a2a; white-space: nowrap; }
+  th { color: #f59e0b; position: sticky; top: 0; background: #1a1a1a; cursor: pointer; }
+  td:nth-child(1), td:nth-child(2), th:nth-child(1), th:nth-child(2) { text-align: left; }
+  tbody tr:hover { background: #202020; }
+  .table-wrap { max-height: 640px; overflow: auto; }
+  .up { color: #4ade80; }
+  .down { color: #f87171; }
+  a { color: #f59e0b; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>台股 P/B-ROE 合理股價篩選器</h1>
+  <div class="subtitle">全市場迴歸 P/B ~ ROE，找出股價低於模型合理價的上市股票</div>
+
+  <div class="panel">
+    <h2>方法說明</h2>
+    <p>
+      1. 從證交所 OpenAPI 抓取全部上市股票最新一期的「本益比、殖利率、股價淨值比」（BWIBBU_ALL）與最新「收盤價」（STOCK_DAY_ALL）。<br>
+      2. 用 ROE = 股價淨值比(P/B) ÷ 本益比(P/E) 還原出每檔股票目前的股東權益報酬率（因為 P/B = P/E × ROE 是恆等式）。<br>
+      3. 對全市場所有股票做「P/B ~ ROE」最小平方法線性迴歸，得到市場對「每一單位 ROE 值多少 P/B」的定價關係：合理P/B = a + b × ROE。<br>
+      4. 合理股價 = 每股淨值 × 合理P/B（每股淨值 = 收盤價 ÷ 目前P/B）。<br>
+      5. 篩出「目前股價 &lt; 合理股價」（即目前 P/B 低於迴歸線）的股票，依低估幅度排序。
+    </p>
+    <p style="color:#f87171;">
+      ⚠️ 這是量化篩選工具，不是投資建議。迴歸模型未區分產業（金融股、景氣循環股的合理估值邏輯不同），且僅反映「相對全市場定價」是否便宜，不代表公司基本面沒有風險。虧損（本益比為負/無法計算）的公司會被自動排除，因為此模型無法評估。請自行搭配財報、產業狀況再做投資判斷。
+    </p>
+  </div>
+
+  <div class="panel">
+    <div class="controls">
+      <button id="scanBtn">開始掃描全市場</button>
+      <label>只顯示低估幅度 ≥ <input type="number" id="minDiscount" value="0" step="1" min="0"> %</label>
+      <button class="secondary" id="csvBtn" disabled>下載 CSV</button>
+    </div>
+    <div id="status"></div>
+    <div id="summary"></div>
+  </div>
+
+  <div class="panel" id="resultPanel" style="display:none;">
+    <h2>篩選結果（現價 &lt; 模型合理股價，依低估幅度由大到小排序）</h2>
+    <div class="table-wrap">
+      <table id="resultTable">
+        <thead>
+          <tr>
+            <th data-key="code">代號</th>
+            <th data-key="name">名稱</th>
+            <th data-key="price">收盤價</th>
+            <th data-key="fairPrice">合理股價</th>
+            <th data-key="discountPct">低估幅度</th>
+            <th data-key="roe">ROE</th>
+            <th data-key="pb">實際P/B</th>
+            <th data-key="fairPb">合理P/B</th>
+            <th data-key="pe">本益比</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+const BWIBBU_URL = 'https://openapi.twse.com.tw/v1/exchangeReport/BWIBBU_ALL';
+const STOCKDAY_URL = 'https://openapi.twse.com.tw/v1/exchangeReport/STOCK_DAY_ALL';
+
+const scanBtn = document.getElementById('scanBtn');
+const csvBtn = document.getElementById('csvBtn');
+const statusEl = document.getElementById('status');
+const summaryEl = document.getElementById('summary');
+const resultPanel = document.getElementById('resultPanel');
+const tbody = document.querySelector('#resultTable tbody');
+const minDiscountInput = document.getElementById('minDiscount');
+
+let currentRows = [];
+let sortKey = 'discountPct';
+let sortDir = -1;
+
+function setStatus(msg, isError) {
+  statusEl.textContent = msg;
+  statusEl.className = isError ? 'error' : '';
+}
+
+function num(v) {
+  if (v === null || v === undefined) return NaN;
+  const n = parseFloat(String(v).replace(/,/g, '').trim());
+  return n;
+}
+
+async function fetchJSON(url) {
+  const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+  if (!res.ok) throw new Error(`${url} 回應 HTTP ${res.status}`);
+  const data = await res.json();
+  if (!Array.isArray(data)) throw new Error(`${url} 回傳格式不是陣列，可能是 API 有變動`);
+  return data;
+}
+
+function linreg(points) {
+  const n = points.length;
+  let sx = 0, sy = 0, sxx = 0, sxy = 0, syy = 0;
+  for (const [x, y] of points) {
+    sx += x; sy += y; sxx += x * x; sxy += x * y; syy += y * y;
+  }
+  const meanX = sx / n, meanY = sy / n;
+  const denom = sxx - n * meanX * meanX;
+  const b = denom !== 0 ? (sxy - n * meanX * meanY) / denom : 0;
+  const a = meanY - b * meanX;
+  let ssTot = 0, ssRes = 0;
+  for (const [x, y] of points) {
+    const pred = a + b * x;
+    ssRes += (y - pred) ** 2;
+    ssTot += (y - meanY) ** 2;
+  }
+  const r2 = ssTot !== 0 ? 1 - ssRes / ssTot : 0;
+  return { a, b, r2, n };
+}
+
+function fmt(n, digits = 2) {
+  return Number.isFinite(n) ? n.toFixed(digits) : '-';
+}
+
+function render() {
+  const minDiscount = num(minDiscountInput.value) || 0;
+  const rows = currentRows
+    .filter(r => r.discountPct >= minDiscount)
+    .sort((r1, r2) => (r1[sortKey] - r2[sortKey]) * sortDir);
+
+  tbody.innerHTML = rows.map(r => `
+    <tr>
+      <td>${r.code}</td>
+      <td>${r.name}</td>
+      <td>${fmt(r.price)}</td>
+      <td>${fmt(r.fairPrice)}</td>
+      <td class="up">${fmt(r.discountPct)}%</td>
+      <td>${fmt(r.roe * 100)}%</td>
+      <td>${fmt(r.pb)}</td>
+      <td>${fmt(r.fairPb)}</td>
+      <td>${fmt(r.pe)}</td>
+    </tr>
+  `).join('');
+
+  resultPanel.style.display = rows.length ? 'block' : 'none';
+  csvBtn.disabled = rows.length === 0;
+}
+
+document.querySelectorAll('#resultTable th').forEach(th => {
+  th.addEventListener('click', () => {
+    const key = th.dataset.key;
+    if (key === 'code' || key === 'name') return;
+    if (sortKey === key) sortDir *= -1; else { sortKey = key; sortDir = -1; }
+    render();
+  });
+});
+
+minDiscountInput.addEventListener('input', render);
+
+csvBtn.addEventListener('click', () => {
+  const header = ['代號', '名稱', '收盤價', '合理股價', '低估幅度(%)', 'ROE(%)', '實際P/B', '合理P/B', '本益比'];
+  const minDiscount = num(minDiscountInput.value) || 0;
+  const rows = currentRows
+    .filter(r => r.discountPct >= minDiscount)
+    .sort((r1, r2) => (r1[sortKey] - r2[sortKey]) * sortDir);
+  const lines = [header.join(',')].concat(rows.map(r => [
+    r.code, r.name, fmt(r.price), fmt(r.fairPrice), fmt(r.discountPct),
+    fmt(r.roe * 100), fmt(r.pb), fmt(r.fairPb), fmt(r.pe)
+  ].join(',')));
+  const blob = new Blob(['﻿' + lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `tw_pb_roe_screen_${new Date().toISOString().slice(0, 10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+});
+
+scanBtn.addEventListener('click', async () => {
+  scanBtn.disabled = true;
+  csvBtn.disabled = true;
+  resultPanel.style.display = 'none';
+  summaryEl.textContent = '';
+  currentRows = [];
+  try {
+    setStatus('抓取全市場本益比 / 殖利率 / 股價淨值比資料中...');
+    const bwibbu = await fetchJSON(BWIBBU_URL);
+    setStatus('抓取全市場收盤價資料中...');
+    const stockday = await fetchJSON(STOCKDAY_URL);
+
+    const priceMap = new Map();
+    for (const row of stockday) {
+      const code = row.Code ?? row.code;
+      const price = num(row.ClosingPrice ?? row.closingPrice);
+      if (code && Number.isFinite(price) && price > 0) priceMap.set(code, price);
+    }
+
+    setStatus('計算 ROE 與迴歸模型中...');
+    const candidates = [];
+    for (const row of bwibbu) {
+      const code = row.Code ?? row.code;
+      const name = row.Name ?? row.name;
+      const pe = num(row.PEratio ?? row.peRatio);
+      const pb = num(row.PBratio ?? row.pbRatio);
+      const price = priceMap.get(code);
+      if (!code || !name || !Number.isFinite(price) || price <= 0) continue;
+      if (!Number.isFinite(pe) || pe <= 0 || pe > 150) continue;
+      if (!Number.isFinite(pb) || pb <= 0 || pb > 20) continue;
+      const roe = pb / pe;
+      if (!Number.isFinite(roe) || roe <= 0 || roe > 0.8) continue;
+      candidates.push({ code, name, pe, pb, price, roe });
+    }
+
+    if (candidates.length < 30) {
+      throw new Error(`可用樣本數過少（${candidates.length} 檔），無法建立可靠迴歸模型，請確認 API 回傳資料是否正常。`);
+    }
+
+    const model = linreg(candidates.map(c => [c.roe, c.pb]));
+
+    currentRows = candidates.map(c => {
+      const fairPb = model.a + model.b * c.roe;
+      const bvps = c.price / c.pb;
+      const fairPrice = bvps * fairPb;
+      const discountPct = (fairPrice - c.price) / c.price * 100;
+      return { ...c, fairPb, fairPrice, discountPct };
+    }).filter(r => r.discountPct > 0);
+
+    summaryEl.innerHTML = `
+      資料日期：證交所 OpenAPI 最新一期（前一交易日）收盤資料<br>
+      掃描樣本：${bwibbu.length} 檔上市股票，可計算 ROE 且納入迴歸的有效樣本 ${candidates.length} 檔<br>
+      迴歸模型：合理P/B = ${fmt(model.a, 3)} + ${fmt(model.b, 3)} × ROE（R² = ${fmt(model.r2, 3)}）<br>
+      低估（現價 &lt; 合理股價）股票共 <b>${currentRows.length}</b> 檔
+    `;
+    setStatus(`完成，共篩出 ${currentRows.length} 檔低估股票。`);
+    render();
+  } catch (err) {
+    console.error(err);
+    setStatus(
+      '掃描失敗：' + err.message +
+      '\n\n若是 CORS 或連線錯誤，代表瀏覽器無法直接呼叫證交所 API，' +
+      '可改用有網路存取權限的環境執行同樣邏輯的 Python/Node 腳本，或改由伺服器端代理。',
+      true
+    );
+  } finally {
+    scanBtn.disabled = false;
+  }
+});
+</script>
+</body>
+</html>
