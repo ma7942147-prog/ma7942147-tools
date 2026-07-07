@@ -304,6 +304,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebas
 import {
   getFirestore, collection, doc, setDoc, getDocs, deleteDoc, onSnapshot, serverTimestamp
 } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
+import { notifyTelegram } from "../shared/telegram-notify.js";
 
 const firebaseConfig = {
   projectId: "my-teaching-tools-77014",
@@ -531,6 +532,7 @@ ${extraNotes ? `【補充說明】${extraNotes}` : ""}
     unlockSectionB();
     statusBar.className = "status-bar";
     statusBar.textContent = `✅ 腳本「${parsed.title}」生成完成，共 ${parsedSegments.length} 段`;
+    notifyTelegram(`📄 教學影片腳本「${parsed.title}」生成完成，共 ${parsedSegments.length} 段`);
   } catch (err) {
     statusBar.className = "status-bar";
     statusBar.textContent = "❌ 生成失敗：" + err.message;

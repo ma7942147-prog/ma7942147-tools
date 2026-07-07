@@ -85,6 +85,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebas
 import {
   getFirestore, collection, doc, setDoc, getDoc, getDocs, deleteDoc, onSnapshot, serverTimestamp
 } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
+import { notifyTelegram } from "../shared/telegram-notify.js";
 
 const firebaseConfig = {
   projectId: "my-teaching-tools-77014",
@@ -191,9 +192,19 @@ function selectProject(id) {
   projectSelect.value = id;
   if (unsub) unsub();
   unsub = onSnapshot(doc(db, COL, id), (snap) => {
-    renderSteps(snap.data() || {});
+    const data = snap.data() || {};
+    renderSteps(data);
     statusBar.textContent = "已同步";
+    checkAllDone(id, data);
   });
+}
+
+async function checkAllDone(id, data) {
+  const allDone = STEPS.every(step => data[step.key + "_done"]);
+  if (allDone && !data.notifiedTelegram) {
+    await setDoc(doc(db, COL, id), { notifiedTelegram: true }, { merge: true });
+    notifyTelegram(`🎬 MV 專案「${data.name || id}」五個步驟全部完成了！`);
+  }
 }
 
 projectSelect.addEventListener("change", () => selectProject(projectSelect.value));
