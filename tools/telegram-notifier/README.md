@@ -4,7 +4,10 @@
 
 程式碼在 `/functions`（Cloud Function），共用呼叫端在 `/tools/shared/telegram-notify.js`。
 
-## 部署步驟（只需做一次）
+✅ 已部署完成。函式網址：`https://us-central1-my-teaching-tools-77014.cloudfunctions.net/notifyTelegram`
+（專案已升級為 Blaze 方案，`TELEGRAM_BOT_TOKEN`、`TELEGRAM_CHAT_ID` 已存在 Secret Manager）
+
+## 部署步驟（僅供之後重新部署或换電腦參考）
 
 1. 安裝 firebase-tools 並登入（在你自己的電腦上）：
    ```
@@ -37,7 +40,7 @@
    部署完成後終端機會印出函式的網址，格式類似：
    `https://asia-east1-my-teaching-tools-77014.cloudfunctions.net/notifyTelegram`
 
-5. 把這個網址貼到 `tools/shared/telegram-notify.js` 裡的 `TELEGRAM_NOTIFY_URL`，取代 `REGION-my-teaching-tools-77014`。
+5. 把這個網址貼到 `tools/shared/telegram-notify.js` 裡的 `TELEGRAM_NOTIFY_URL`。
 
 ## 已接上通知的工具
 
