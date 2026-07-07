@@ -1,0 +1,13 @@
+{
+  "name": "argus",
+  "version": "1.0.0",
+  "private": true,
+  "description": "ARGUS 阿古斯 — AI 破框交易訊號引擎",
+  "type": "commonjs",
+  "engines": { "node": ">=18" },
+  "scripts": {
+    "start": "node server.js",
+    "demo": "ARGUS_MOCK=1 node server.js",
+    "test": "node test.js && node test-integration.js"
+  }
+}

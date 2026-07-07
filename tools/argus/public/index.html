@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ARGUS 阿古斯 · AI 訊號引擎</title>
+<style>
+  :root {
+    --bg: #070a0f;
+    --panel: rgba(18, 26, 34, 0.72);
+    --panel-line: rgba(52, 211, 153, 0.14);
+    --ink: #e6f0f0;
+    --dim: #7d8b92;
+    --teal: #2dd4bf;
+    --green: #34d399;
+    --amber: #f59e0b;
+    --red: #f87171;
+    --mono: "SF Mono", "JetBrains Mono", "Consolas", monospace;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 22px;
+    font-family: -apple-system, "Segoe UI", "PingFang TC", "Microsoft JhengHei", sans-serif;
+    color: var(--ink);
+    background:
+      radial-gradient(1100px 600px at 78% -8%, rgba(45,212,191,0.10), transparent 60%),
+      radial-gradient(900px 500px at 10% 110%, rgba(245,158,11,0.06), transparent 60%),
+      var(--bg);
+    min-height: 100vh;
+  }
+  .wrap { max-width: 1080px; margin: 0 auto; }
+
+  /* header */
+  header { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 20px; flex-wrap: wrap; }
+  .brand { display: flex; align-items: center; gap: 14px; }
+  .logo {
+    width: 46px; height: 46px; border-radius: 12px; flex-shrink: 0;
+    background: linear-gradient(135deg, #f59e0b, #b45309);
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 800; font-size: 24px; color: #1a1205;
+    box-shadow: 0 0 26px rgba(245,158,11,0.45);
+  }
+  .brand h1 { margin: 0; font-size: 22px; letter-spacing: 1px; }
+  .brand .sub { margin-top: 2px; font-size: 11px; letter-spacing: 3px; color: var(--teal); text-transform: uppercase; }
+  .head-right { display: flex; align-items: center; gap: 18px; }
+  .uptime { text-align: right; }
+  .uptime .label { font-size: 10px; letter-spacing: 2px; color: var(--dim); }
+  .uptime .val { font-family: var(--mono); font-size: 22px; color: var(--teal); }
+  .live {
+    display: flex; align-items: center; gap: 8px; padding: 7px 14px; border-radius: 999px;
+    border: 1px solid rgba(52,211,153,0.4); background: rgba(52,211,153,0.08);
+    font-size: 12px; letter-spacing: 2px; color: var(--green); font-weight: 700;
+  }
+  .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--green); box-shadow: 0 0 0 0 rgba(52,211,153,0.6); animation: pulse 1.8s infinite; }
+  @keyframes pulse { 0%{box-shadow:0 0 0 0 rgba(52,211,153,0.55);} 70%{box-shadow:0 0 0 10px rgba(52,211,153,0);} 100%{box-shadow:0 0 0 0 rgba(52,211,153,0);} }
+  .off .dot, .off.live { color: var(--red); border-color: rgba(248,113,113,0.4); background: rgba(248,113,113,0.08); }
+  .off .dot { background: var(--red); }
+
+  /* layout */
+  .grid { display: grid; grid-template-columns: 1.35fr 1fr; gap: 16px; }
+  @media (max-width: 820px) { .grid { grid-template-columns: 1fr; } }
+  .col { display: flex; flex-direction: column; gap: 16px; }
+  .panel { background: var(--panel); border: 1px solid var(--panel-line); border-radius: 16px; padding: 18px; backdrop-filter: blur(4px); }
+  .panel .cap { font-size: 11px; letter-spacing: 2px; color: var(--dim); text-transform: uppercase; margin-bottom: 12px; display:flex; gap:8px; align-items:center; }
+  .panel .cap b { color: var(--ink); font-weight: 600; letter-spacing: 0; }
+
+  /* status */
+  .status-head { display: flex; align-items: center; gap: 16px; }
+  .ring { position: relative; width: 54px; height: 54px; flex-shrink: 0; }
+  .ring i { position: absolute; inset: 0; border-radius: 50%; }
+  .ring i:nth-child(1){ background: rgba(52,211,153,0.16); animation: halo 2.2s infinite; }
+  .ring i:nth-child(2){ inset: 16px; background: var(--green); box-shadow: 0 0 22px var(--green); }
+  @keyframes halo { 0%{transform:scale(0.7);opacity:.9;} 100%{transform:scale(1.5);opacity:0;} }
+  .status-head h2 { margin: 0; font-size: 26px; }
+  .status-head .s2 { color: var(--dim); font-size: 12px; letter-spacing: 2px; margin-top: 3px; }
+
+  .ecg { margin-top: 14px; height: 92px; overflow: hidden; border-radius: 10px; background: rgba(0,0,0,0.25); position: relative; }
+  .ecg svg { position: absolute; top: 0; left: 0; height: 100%; filter: drop-shadow(0 0 6px rgba(52,211,153,0.8)); }
+  .ecg .scan { animation: slide 4s linear infinite; }
+  @keyframes slide { from { transform: translateX(0); } to { transform: translateX(-600px); } }
+
+  /* scan cycle */
+  .cycle { display: flex; align-items: center; gap: 20px; }
+  .counter { position: relative; width: 108px; height: 108px; flex-shrink: 0; }
+  .counter svg { transform: rotate(-90deg); }
+  .counter .mid { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+  .counter .mid .t { font-family: var(--mono); font-size: 22px; color: var(--amber); }
+  .counter .mid .l { font-size: 9px; letter-spacing: 2px; color: var(--dim); }
+  .cycle-info { flex: 1; }
+  .cycle-info .big { font-size: 16px; font-weight: 600; margin-bottom: 4px; }
+  .cycle-info .row { font-size: 13px; color: var(--dim); margin-top: 6px; }
+  .cycle-info .row b { color: var(--teal); font-family: var(--mono); }
+
+  /* activity log */
+  .log { max-height: 260px; overflow-y: auto; }
+  .log .item { display: flex; gap: 10px; font-size: 13px; padding: 5px 0; border-bottom: 1px solid rgba(255,255,255,0.03); align-items: baseline; }
+  .log .item .tm { font-family: var(--mono); color: var(--dim); font-size: 11px; flex-shrink: 0; }
+  .log .item .tx { flex: 1; color: #cdd7d7; }
+  .log .item .sym { color: var(--amber); font-family: var(--mono); font-size: 11px; }
+  .log .item.sig .tx { color: var(--green); font-weight: 600; }
+
+  /* markets */
+  .mkt { border: 1px solid rgba(255,255,255,0.06); border-radius: 12px; padding: 14px; margin-bottom: 12px; background: rgba(0,0,0,0.2); }
+  .mkt:last-child { margin-bottom: 0; }
+  .mkt-top { display: flex; align-items: center; gap: 12px; }
+  .badge { width: 38px; height: 38px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 15px; flex-shrink: 0; color: #120c02; }
+  .mkt .name { flex: 1; }
+  .mkt .name .sym { font-weight: 700; font-size: 15px; }
+  .mkt .name .zh { font-size: 11px; color: var(--dim); }
+  .mkt .st { width: 8px; height: 8px; border-radius: 50%; background: var(--green); }
+  .mkt .st.error { background: var(--red); }
+  .mkt .st.init { background: var(--dim); }
+  .mkt-price { display: flex; align-items: baseline; gap: 10px; margin-top: 10px; }
+  .mkt-price .p { font-family: var(--mono); font-size: 24px; }
+  .mkt-price .chg { font-size: 12px; font-family: var(--mono); }
+  .up { color: var(--green); } .down { color: var(--red); }
+  .sig-tag { display: inline-block; margin-top: 8px; font-size: 11px; padding: 3px 8px; border-radius: 6px; letter-spacing: 1px; }
+  .sig-tag.LONG { background: rgba(52,211,153,0.14); color: var(--green); }
+  .sig-tag.SHORT { background: rgba(248,113,113,0.14); color: var(--red); }
+
+  /* channel */
+  .chan .lead { font-size: 15px; font-weight: 600; margin-bottom: 4px; }
+  .chan .lead2 { font-size: 12px; color: var(--dim); margin-bottom: 14px; }
+  .chan a.btn { display: flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none;
+    background: linear-gradient(135deg, #2dd4bf, #0ea5a0); color: #04201d; font-weight: 700; font-size: 14px;
+    padding: 11px; border-radius: 10px; }
+  .chan a.btn:hover { filter: brightness(1.08); }
+  .stats { display: flex; gap: 12px; margin-top: 14px; }
+  .stat { flex: 1; text-align: center; background: rgba(0,0,0,0.25); border-radius: 10px; padding: 10px; }
+  .stat .n { font-family: var(--mono); font-size: 24px; color: var(--teal); }
+  .stat .k { font-size: 10px; letter-spacing: 1px; color: var(--dim); margin-top: 2px; }
+
+  .footer { text-align: center; color: var(--dim); font-size: 11px; margin-top: 20px; line-height: 1.7; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand">
+      <div class="logo">A</div>
+      <div>
+        <h1>ARGUS <span style="font-weight:400;color:var(--dim)">阿古斯</span></h1>
+        <div class="sub">AI Signal Engine · <span id="ver">v1.0</span></div>
+      </div>
+    </div>
+    <div class="head-right">
+      <div class="uptime">
+        <div class="label">運行時間 UPTIME</div>
+        <div class="val" id="uptime">00:00:00</div>
+      </div>
+      <div class="live" id="livePill"><span class="dot"></span><span id="liveText">LIVE</span></div>
+    </div>
+  </header>
+
+  <div class="grid">
+    <!-- 左欄 -->
+    <div class="col">
+      <div class="panel">
+        <div class="status-head">
+          <div class="ring"><i></i><i></i></div>
+          <div>
+            <h2 id="statusTitle">AI 運作中</h2>
+            <div class="s2">SYSTEM ACTIVE · 即時掃描引擎</div>
+          </div>
+        </div>
+        <div class="ecg">
+          <svg width="1200" height="92" viewBox="0 0 1200 92" preserveAspectRatio="none">
+            <polyline class="scan" fill="none" stroke="#34d399" stroke-width="2"
+              points="0,46 60,46 80,46 92,20 104,72 116,46 200,46 260,46 280,46 292,20 304,72 316,46 400,46 460,46 480,46 492,20 504,72 516,46 600,46 660,46 680,46 692,20 704,72 716,46 800,46 860,46 880,46 892,20 904,72 916,46 1000,46 1060,46 1080,46 1092,20 1104,72 1116,46 1200,46" />
+          </svg>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="cap">掃描週期 · <b>Scan Cycle</b></div>
+        <div class="cycle">
+          <div class="counter">
+            <svg width="108" height="108">
+              <circle cx="54" cy="54" r="48" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="6"/>
+              <circle id="ringProg" cx="54" cy="54" r="48" fill="none" stroke="#f59e0b" stroke-width="6"
+                stroke-linecap="round" stroke-dasharray="301.6" stroke-dashoffset="0"/>
+            </svg>
+            <div class="mid"><div class="t" id="countdown">--:--</div><div class="l">NEXT</div></div>
+          </div>
+          <div class="cycle-info">
+            <div class="big">下次掃描</div>
+            <div class="row">每 <b id="interval">5</b> 分鐘自動觸發</div>
+            <div class="row">今日已掃描 <b id="scanCount">0</b> 次</div>
+            <div class="row">上次：<b id="lastScan">—</b></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="cap">即時活動 · <b>Activity Log</b></div>
+        <div class="log" id="log"></div>
+      </div>
+    </div>
+
+    <!-- 右欄 -->
+    <div class="col">
+      <div class="panel">
+        <div class="cap">監控市場 · <b>Monitoring</b></div>
+        <div id="markets"></div>
+      </div>
+
+      <div class="panel chan">
+        <div class="cap">訊號頻道 · <b>Signal Channel</b></div>
+        <div class="lead">想收到第一手訊號？</div>
+        <div class="lead2">破框訊號即時推播到 Telegram</div>
+        <a class="btn" id="tgLink" href="https://t.me/ma7942147_bot" target="_blank">✈️ 私訊小編入群</a>
+        <div class="stats">
+          <div class="stat"><div class="n" id="totalSignals">0</div><div class="k">累計訊號</div></div>
+          <div class="stat"><div class="n" id="openCount">0</div><div class="k">進行中</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">
+    ARGUS 阿古斯 · AI 訊號引擎 — 僅產生型態訊號供研究參考，不構成投資建議。<br/>
+    資料來源：Binance (BTC) · Yahoo Finance (XAU)。市場有風險，交易請自負盈虧。
+  </div>
+</div>
+
+<script>
+const CIRC = 2 * Math.PI * 48; // 圓周長 ≈ 301.6
+let S = null;         // 最新 snapshot
+let offset = 0;       // 伺服器時間 - 本機時間
+let intervalMs = 5 * 60 * 1000;
+
+function serverNow() { return Date.now() + offset; }
+function pad(n) { return String(n).padStart(2, '0'); }
+function hhmmss(ms) {
+  const s = Math.max(0, Math.floor(ms / 1000));
+  return pad(Math.floor(s / 3600)) + ':' + pad(Math.floor(s % 3600 / 60)) + ':' + pad(s % 60);
+}
+function mmss(ms) {
+  const s = Math.max(0, Math.floor(ms / 1000));
+  return pad(Math.floor(s / 60)) + ':' + pad(s % 60);
+}
+function twTime(ts) {
+  return new Date(ts).toLocaleTimeString('zh-TW', { timeZone: 'Asia/Taipei', hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+}
+
+async function poll() {
+  try {
+    const r = await fetch('/api/state', { cache: 'no-store' });
+    S = await r.json();
+    offset = S.now - Date.now();
+    intervalMs = (S.scanIntervalMin || 5) * 60000;
+    render();
+  } catch (e) {
+    setOffline();
+  }
+}
+
+function setOffline() {
+  const pill = document.getElementById('livePill');
+  pill.classList.add('off');
+  document.getElementById('liveText').textContent = 'OFFLINE';
+  document.getElementById('statusTitle').textContent = '連線中斷';
+}
+
+function render() {
+  if (!S) return;
+  document.getElementById('ver').textContent = S.version;
+  document.getElementById('interval').textContent = S.scanIntervalMin;
+  document.getElementById('scanCount').textContent = S.scanCountToday;
+  document.getElementById('totalSignals').textContent = S.totalSignals;
+  document.getElementById('openCount').textContent = S.openCount;
+  document.getElementById('lastScan').textContent = S.lastScanAt ? twTime(S.lastScanAt) : '尚未掃描';
+  document.getElementById('statusTitle').textContent = S.scanning ? '掃描中…' : 'AI 運作中';
+
+  // markets
+  const mk = document.getElementById('markets');
+  mk.innerHTML = '';
+  S.markets.forEach(m => {
+    const chg = m.changePct;
+    const chgCls = chg == null ? '' : (chg >= 0 ? 'up' : 'down');
+    const chgTxt = chg == null ? '' : (chg >= 0 ? '▲ ' : '▼ ') + Math.abs(chg).toFixed(2) + '%';
+    const stCls = m.status === 'ok' ? '' : (m.status === 'error' ? 'error' : 'init');
+    const sig = m.signal ? `<span class="sig-tag ${m.signal.dir}">${m.signal.dir} · ${m.signal.status === 'pending' ? '等回測' : '進行中'}</span>` : '';
+    const el = document.createElement('div');
+    el.className = 'mkt';
+    el.innerHTML = `
+      <div class="mkt-top">
+        <div class="badge" style="background:${m.accent}">${m.code}</div>
+        <div class="name"><div class="sym">${m.symbol}</div><div class="zh">${m.name}</div></div>
+        <div class="st ${stCls}"></div>
+      </div>
+      <div class="mkt-price">
+        <div class="p">${m.price ?? '—'}</div>
+        <div class="chg ${chgCls}">${chgTxt}</div>
+      </div>
+      ${sig}
+    `;
+    mk.appendChild(el);
+  });
+
+  // activity log
+  const log = document.getElementById('log');
+  log.innerHTML = '';
+  S.activity.forEach(a => {
+    const isSig = /訊號|結算|回測|TP\d|止損/.test(a.text);
+    const el = document.createElement('div');
+    el.className = 'item' + (isSig ? ' sig' : '');
+    el.innerHTML = `<span class="tm">${twTime(a.t)}</span><span class="tx">${a.text}</span>${a.symbol ? `<span class="sym">${a.symbol}</span>` : ''}`;
+    log.appendChild(el);
+  });
+}
+
+// 每秒更新 uptime / 倒數（本機推算，不需一直打 API）
+function tick() {
+  if (!S) return;
+  document.getElementById('uptime').textContent = hhmmss(serverNow() - S.startedAt);
+  const remain = S.nextScanAt - serverNow();
+  document.getElementById('countdown').textContent = mmss(remain);
+  const frac = Math.min(1, Math.max(0, remain / intervalMs));
+  document.getElementById('ringProg').style.strokeDashoffset = String(CIRC * (1 - frac));
+}
+
+poll();
+setInterval(poll, 5000);
+setInterval(tick, 1000);
+</script>
+</body>
+</html>

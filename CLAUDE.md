@@ -19,6 +19,7 @@
 - **mv-creator**：MV 創作追蹤器（主題→歌詞→曲風→Suno→Grok 影片）
 - **edu-video-maker**：影音教學 Agent 工作室（腳本→語音→影片）
 - **telegram-notifier**：共用的 Telegram 通知基礎設施（`/functions` + `tools/shared/telegram-notify.js`），部署步驟見 `tools/telegram-notifier/README.md`；bot 是 @ma7942147_bot
+- **argus**：ARGUS 阿古斯 AI 破框交易訊號引擎（本機 Node 伺服器 localhost:3002）。每 5 分鐘掃 BTC/USD、XAU/USD，破框產生進場/止損/停利訊號並推 Telegram，含即時儀表板。跑法：`cd tools/argus && node server.js`（或 `ARGUS_MOCK=1` 看假資料）。詳見 `tools/argus/README.md`
 
 ## 工作注意事項
 - 個人資料一律去識別化
