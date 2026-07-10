@@ -1,0 +1,615 @@
+<!-- 野原一家的出國大作戰！2026 入境新規篇 -->
+<!-- 蠟筆小新風格・全彩漫畫投影片 -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>野原一家的出國大作戰！2026 入境新規篇</title>
+<style>
+  :root{
+    --ink:#2b2320; --paper:#fdf6e9; --red:#e8402c; --yellow:#f7c81e;
+    --skin:#ffdcb2; --brown:#7a4a24; --blue:#3f7fd0; --green:#3fb07a;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    font-family:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;
+    background:#171310;color:var(--ink);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;
+  }
+  /* ===== 舞台 ===== */
+  #stage{position:relative;flex:1 1 auto;width:100vw;min-height:0;display:flex;align-items:center;justify-content:center}
+  .page{
+    position:absolute;inset:0;margin:auto;
+    width:min(96vw, calc((100vh - 72px) * 1.5)); height:min(calc(100vh - 72px), calc(96vw / 1.5));
+    background:var(--paper);
+    background-image:radial-gradient(rgba(0,0,0,.05) 1px, transparent 1px);
+    background-size:7px 7px;
+    border:5px solid var(--ink);border-radius:10px;
+    box-shadow:0 18px 50px rgba(0,0,0,.6);
+    padding:12px 14px 14px;
+    display:none;flex-direction:column;gap:8px;
+    opacity:0;transition:opacity .35s ease;
+  }
+  .page.active{display:flex;opacity:1}
+  /* ===== 頁首標題 ===== */
+  .banner{
+    position:relative;flex:0 0 auto;
+    background:var(--red);color:#fff;border:4px solid var(--ink);border-radius:8px;
+    padding:6px 14px;display:flex;align-items:center;gap:10px;
+    box-shadow:3px 3px 0 var(--ink);
+  }
+  .banner .pgno{
+    background:var(--yellow);color:var(--ink);border:3px solid var(--ink);border-radius:50%;
+    width:38px;height:38px;display:grid;place-items:center;font-weight:900;font-size:20px;flex:0 0 auto;
+  }
+  .banner h1{font-size:clamp(15px,2.1vw,27px);font-weight:900;letter-spacing:1px;
+    text-shadow:2px 2px 0 var(--ink);line-height:1.15}
+  /* ===== 分鏡格線 ===== */
+  .grid{flex:1 1 auto;display:grid;gap:8px;min-height:0}
+  .g4{grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr}
+  .g3a{grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr}
+  .panel{
+    position:relative;overflow:hidden;background:#cfeaf5;
+    border:4px solid var(--ink);border-radius:6px;
+  }
+  .panel svg.scene{position:absolute;inset:0;width:100%;height:100%}
+  .span2{grid-column:1 / span 2}
+  /* ===== 對話框 ===== */
+  .bubble{
+    position:absolute;background:#fff;border:3px solid var(--ink);
+    padding:5px 9px;border-radius:14px;
+    font-weight:800;font-size:clamp(9px,1.15vw,15px);line-height:1.28;
+    max-width:47%;box-shadow:2px 2px 0 rgba(0,0,0,.25);z-index:3;
+  }
+  .bubble b{color:var(--red)}
+  .bubble .tail{position:absolute;width:0;height:0}
+  .bubble.bl .tail{left:16px;bottom:-14px;border:8px solid transparent;border-top-color:var(--ink)}
+  .bubble.bl .tail::after{content:"";position:absolute;left:-6px;top:-9px;border:6px solid transparent;border-top-color:#fff}
+  .bubble.br .tail{right:16px;bottom:-14px;border:8px solid transparent;border-top-color:var(--ink)}
+  .bubble.br .tail::after{content:"";position:absolute;left:-6px;top:-9px;border:6px solid transparent;border-top-color:#fff}
+  .bubble.think{border-radius:50%/45%;border-style:dashed}
+  .name{color:var(--blue);font-weight:900}
+  .name.m{color:var(--red)}
+  .name.d{color:#2a6ad0}
+  .name.s{color:#d68a00}
+  /* 狀聲詞 */
+  .sfx{
+    position:absolute;z-index:4;font-weight:900;color:var(--yellow);
+    -webkit-text-stroke:2px var(--ink);paint-order:stroke;
+    font-size:clamp(16px,3vw,40px);transform:rotate(-8deg);
+    text-shadow:3px 3px 0 rgba(0,0,0,.25);pointer-events:none;
+  }
+  /* 旁白 / 知識條 */
+  .cap{
+    position:absolute;z-index:3;background:var(--yellow);border:3px solid var(--ink);
+    padding:3px 8px;font-weight:800;font-size:clamp(9px,1.15vw,15px);
+    box-shadow:2px 2px 0 var(--ink);max-width:64%;line-height:1.25;
+  }
+  .knowledge{
+    flex:0 0 auto;background:#fff;border:4px dashed var(--ink);border-radius:8px;
+    padding:5px 12px;font-weight:800;font-size:clamp(9px,1.35vw,16px);
+    display:flex;align-items:center;gap:8px;
+  }
+  .knowledge .k{background:var(--green);color:#fff;border:3px solid var(--ink);border-radius:6px;
+    padding:1px 9px;font-weight:900;flex:0 0 auto;font-size:.95em}
+  .knowledge b{color:var(--red)}
+  /* 重點小黑板 */
+  .board{
+    position:absolute;z-index:3;background:#20493b;color:#fff;border:4px solid #b98a4a;border-radius:6px;
+    padding:6px 10px;font-weight:700;font-size:clamp(8px,1.05vw,14px);line-height:1.45;
+    box-shadow:3px 3px 0 rgba(0,0,0,.3);max-width:52%;
+  }
+  .board b{color:var(--yellow)}
+  .board .bt{display:block;font-weight:900;color:#ffe;border-bottom:2px dashed #b98a4a;margin-bottom:3px;padding-bottom:2px}
+  /* ===== 控制列 ===== */
+  #nav{flex:0 0 auto;margin:8px auto 10px;z-index:50;
+    display:flex;align-items:center;gap:10px;
+    background:rgba(255,255,255,.92);border:3px solid var(--ink);border-radius:30px;padding:5px 8px;
+    box-shadow:0 6px 16px rgba(0,0,0,.4)}
+  #nav button{font:inherit;font-weight:900;cursor:pointer;border:3px solid var(--ink);
+    background:var(--yellow);border-radius:20px;padding:5px 14px;box-shadow:2px 2px 0 var(--ink)}
+  #nav button:active{transform:translate(2px,2px);box-shadow:0 0 0 var(--ink)}
+  #nav .dot{width:12px;height:12px;border-radius:50%;border:2px solid var(--ink);background:#fff;cursor:pointer}
+  #nav .dot.on{background:var(--red)}
+  #hint{position:fixed;top:10px;right:14px;z-index:50;color:#fff;opacity:.65;font-size:13px}
+</style>
+
+<!-- ============ 角色圖庫（隱藏，供各格 <use> 重複使用） ============ -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <!-- ---------- 小新（開心・舉手扭腰） ---------- -->
+    <symbol id="shin" viewBox="0 0 200 340">
+      <!-- 腿 -->
+      <path d="M78,300 h16 v34 h-16z" fill="var(--skin)" stroke="var(--ink)" stroke-width="4"/>
+      <path d="M106,300 h16 v34 h-16z" fill="var(--skin)" stroke="var(--ink)" stroke-width="4"/>
+      <ellipse cx="86" cy="334" rx="16" ry="8" fill="#e8402c" stroke="var(--ink)" stroke-width="4"/>
+      <ellipse cx="114" cy="334" rx="16" ry="8" fill="#e8402c" stroke="var(--ink)" stroke-width="4"/>
+      <!-- 黃短褲 -->
+      <path d="M64,250 h72 l-6,52 h-26 l-4,-14 -4,14 h-26z" fill="var(--yellow)" stroke="var(--ink)" stroke-width="4"/>
+      <!-- 紅上衣 -->
+      <path d="M60,182 q40,-16 80,0 l8,74 h-96z" fill="var(--red)" stroke="var(--ink)" stroke-width="4"/>
+      <!-- 左手垂 -->
+      <path d="M64,196 l-16,52" fill="none" stroke="var(--red)" stroke-width="16" stroke-linecap="round"/>
+      <circle cx="46" cy="252" r="10" fill="var(--skin)" stroke="var(--ink)" stroke-width="4"/>
+      <!-- 右手舉 -->
+      <path d="M138,196 l24,-44" fill="none" stroke="var(--red)" stroke-width="16" stroke-linecap="round"/>
+      <circle cx="166" cy="146" r="11" fill="var(--skin)" stroke="var(--ink)" stroke-width="4"/>
+      <!-- 頭 -->
+      <ellipse cx="100" cy="112" rx="56" ry="52" fill="var(--skin)" stroke="var(--ink)" stroke-width="4.5"/>
+      <!-- 頭髮 -->
+      <path d="M46,110 C40,44 160,44 154,110 C150,86 132,80 100,80 C68,80 50,86 46,110 Z" fill="#1c140f"/>
+      <path d="M92,46 q8,-14 18,0" fill="#1c140f"/>
+      <!-- 粗眉 -->
+      <ellipse cx="78" cy="98" rx="17" ry="6.5" fill="#1c140f"/>
+      <ellipse cx="122" cy="98" rx="17" ry="6.5" fill="#1c140f"/>
+      <!-- 眼 -->
+      <ellipse cx="80" cy="116" rx="10" ry="13" fill="#fff" stroke="var(--ink)" stroke-width="3"/>
+      <ellipse cx="120" cy="116" rx="10" ry="13" fill="#fff" stroke="var(--ink)" stroke-width="3"/>
+      <circle cx="82" cy="118" r="5" fill="#1c140f"/>
+      <circle cx="118" cy="118" r="5" fill="#1c140f"/>
+      <!-- 鼻 -->
+      <path d="M100,124 q6,4 0,8" fill="none" stroke="var(--ink)" stroke-width="2.5"/>
+      <!-- 大笑嘴 -->
+      <path d="M78,138 q22,26 44,0 q-22,10 -44,0z" fill="#a02414" stroke="var(--ink)" stroke-width="3.5"/>
+      <!-- 腮紅 -->
+      <ellipse cx="62" cy="130" rx="7" ry="4" fill="#ff9a86" opacity=".7"/>
+      <ellipse cx="138" cy="130" rx="7" ry="4" fill="#ff9a86" opacity=".7"/>
+    </symbol>
+
+    <!-- ---------- 小新（扭屁股・動感光波） ---------- -->
+    <symbol id="shinButt" viewBox="0 0 220 320">
+      <!-- 腿 -->
+      <path d="M96,250 l-6,40 h16 l4,-40z" fill="var(--skin)" stroke="var(--ink)" stroke-width="4"/>
+      <path d="M128,250 l10,40 h16 l-10,-40z" fill="var(--skin)" stroke="var(--ink)" stroke-width="4"/>
+      <ellipse cx="98" cy="292" rx="15" ry="8" fill="#e8402c" stroke="var(--ink)" stroke-width="4"/>
+      <ellipse cx="150" cy="292" rx="15" ry="8" fill="#e8402c" stroke="var(--ink)" stroke-width="4"/>
+      <!-- 翹屁股黃短褲 -->
+      <path d="M70,214 q60,-26 96,10 q6,26 -18,34 q-40,10 -74,-8 q-12,-20 -4,-36z" fill="var(--yellow)" stroke="var(--ink)" stroke-width="4"/>
+      <!-- 身體（前傾） -->
+      <path d="M60,150 q50,-14 78,10 l24,58 q-46,20 -96,-4z" fill="var(--red)" stroke="var(--ink)" stroke-width="4"/>
+      <!-- 雙手張開 -->
+      <path d="M62,168 l-30,-8" stroke="var(--red)" stroke-width="15" stroke-linecap="round" fill="none"/>
+      <circle cx="28" cy="158" r="10" fill="var(--skin)" stroke="var(--ink)" stroke-width="4"/>
+      <path d="M150,166 l30,-14" stroke="var(--red)" stroke-width="15" stroke-linecap="round" fill="none"/>
+      <circle cx="186" cy="148" r="10" fill="var(--skin)" stroke="var(--ink)" stroke-width="4"/>
+      <!-- 頭（回頭賊笑） -->
+      <ellipse cx="88" cy="86" rx="50" ry="48" fill="var(--skin)" stroke="var(--ink)" stroke-width="4.5"/>
+      <path d="M40,86 C34,26 138,26 134,86 C130,64 112,58 87,58 C60,58 44,64 40,86Z" fill="#1c140f"/>
+      <ellipse cx="68" cy="74" rx="15" ry="6" fill="#1c140f"/>
+      <ellipse cx="108" cy="74" rx="15" ry="6" fill="#1c140f"/>
+      <path d="M60,90 q8,-6 16,0" fill="none" stroke="var(--ink)" stroke-width="3.5"/>
+      <path d="M100,90 q8,-6 16,0" fill="none" stroke="var(--ink)" stroke-width="3.5"/>
+      <path d="M66,108 q22,16 42,0 q-21,7 -42,0z" fill="#a02414" stroke="var(--ink)" stroke-width="3.5"/>
+      <ellipse cx="52" cy="102" rx="6" ry="4" fill="#ff9a86" opacity=".7"/>
+    </symbol>
+
+    <!-- ---------- 媽媽 美冴（一般・微笑） ---------- -->
+    <symbol id="misae" viewBox="0 0 200 350">
+      <path d="M82,300 h14 v46 h-14z" fill="var(--skin)" stroke="var(--ink)" stroke-width="4"/>
+      <path d="M104,300 h14 v46 h-14z" fill="var(--skin)" stroke="var(--ink)" stroke-width="4"/>
+      <ellipse cx="86" cy="346" rx="15" ry="7" fill="#c94f7c" stroke="var(--ink)" stroke-width="4"/>
+      <ellipse cx="114" cy="346" rx="15" ry="7" fill="#c94f7c" stroke="var(--ink)" stroke-width="4"/>
+      <!-- 裙 -->
+      <path d="M58,236 h84 l14,72 h-112z" fill="var(--green)" stroke="var(--ink)" stroke-width="4"/>
+      <!-- 上衣 -->
+      <path d="M62,176 q38,-16 76,0 l6,64 h-88z" fill="#ffd24a" stroke="var(--ink)" stroke-width="4"/>
+      <!-- 手 -->
+      <path d="M66,190 l-20,48" stroke="#ffd24a" stroke-width="15" stroke-linecap="round" fill="none"/>
+      <circle cx="44" cy="244" r="10" fill="var(--skin)" stroke="var(--ink)" stroke-width="4"/>
+      <path d="M134,190 l20,48" stroke="#ffd24a" stroke-width="15" stroke-linecap="round" fill="none"/>
+      <circle cx="156" cy="244" r="10" fill="var(--skin)" stroke="var(--ink)" stroke-width="4"/>
+      <!-- 頭 -->
+      <ellipse cx="100" cy="112" rx="50" ry="50" fill="var(--skin)" stroke="var(--ink)" stroke-width="4.5"/>
+      <!-- 棕色捲髮 -->
+      <path d="M48,120 C36,40 164,40 152,120 C168,96 156,52 128,44 C150,60 150,86 138,92
+               C142,66 120,56 100,56 C80,56 58,66 62,92 C50,86 50,60 72,44 C44,52 32,96 48,120Z"
+            fill="var(--brown)"/>
+      <path d="M52,108 q-14,10 -6,34 q10,-6 10,-22z" fill="var(--brown)"/>
+      <path d="M148,108 q14,10 6,34 q-10,-6 -10,-22z" fill="var(--brown)"/>
+      <!-- 眉 -->
+      <path d="M68,96 q12,-6 22,-1" fill="none" stroke="#5a3418" stroke-width="4" stroke-linecap="round"/>
+      <path d="M110,95 q12,-5 22,1" fill="none" stroke="#5a3418" stroke-width="4" stroke-linecap="round"/>
+      <!-- 眼（含睫毛） -->
+      <ellipse cx="82" cy="112" rx="9" ry="12" fill="#fff" stroke="var(--ink)" stroke-width="3"/>
+      <ellipse cx="118" cy="112" rx="9" ry="12" fill="#fff" stroke="var(--ink)" stroke-width="3"/>
+      <circle cx="83" cy="114" r="5" fill="#1c140f"/><circle cx="117" cy="114" r="5" fill="#1c140f"/>
+      <path d="M72,102 l-6,-4 M92,103 l4,-5 M128,102 l6,-4 M108,103 l-4,-5" stroke="var(--ink)" stroke-width="2.5"/>
+      <path d="M100,122 q5,4 0,8" fill="none" stroke="var(--ink)" stroke-width="2.5"/>
+      <path d="M84,138 q16,14 32,0" fill="none" stroke="var(--ink)" stroke-width="3.5" stroke-linecap="round"/>
+      <ellipse cx="66" cy="128" rx="7" ry="4" fill="#ff9a86" opacity=".65"/>
+      <ellipse cx="134" cy="128" rx="7" ry="4" fill="#ff9a86" opacity=".65"/>
+    </symbol>
+
+    <!-- ---------- 媽媽 美冴（震驚・頭暈） ---------- -->
+    <symbol id="misaeShock" viewBox="0 0 200 350">
+      <path d="M82,300 h14 v46 h-14z" fill="var(--skin)" stroke="var(--ink)" stroke-width="4"/>
+      <path d="M104,300 h14 v46 h-14z" fill="var(--skin)" stroke="var(--ink)" stroke-width="4"/>
+      <ellipse cx="86" cy="346" rx="15" ry="7" fill="#c94f7c" stroke="var(--ink)" stroke-width="4"/>
+      <ellipse cx="114" cy="346" rx="15" ry="7" fill="#c94f7c" stroke="var(--ink)" stroke-width="4"/>
+      <path d="M58,236 h84 l14,72 h-112z" fill="var(--green)" stroke="var(--ink)" stroke-width="4"/>
+      <path d="M62,176 q38,-16 76,0 l6,64 h-88z" fill="#ffd24a" stroke="var(--ink)" stroke-width="4"/>
+      <!-- 雙手抱頭 -->
+      <path d="M66,188 l6,-40" stroke="#ffd24a" stroke-width="15" stroke-linecap="round" fill="none"/>
+      <circle cx="72" cy="140" r="10" fill="var(--skin)" stroke="var(--ink)" stroke-width="4"/>
+      <path d="M134,188 l-6,-40" stroke="#ffd24a" stroke-width="15" stroke-linecap="round" fill="none"/>
+      <circle cx="128" cy="140" r="10" fill="var(--skin)" stroke="var(--ink)" stroke-width="4"/>
+      <ellipse cx="100" cy="112" rx="50" ry="50" fill="var(--skin)" stroke="var(--ink)" stroke-width="4.5"/>
+      <path d="M48,120 C36,40 164,40 152,120 C168,96 156,52 128,44 C150,60 150,86 138,92
+               C142,66 120,56 100,56 C80,56 58,66 62,92 C50,86 50,60 72,44 C44,52 32,96 48,120Z"
+            fill="var(--brown)"/>
+      <!-- 驚恐眉 -->
+      <path d="M66,90 q12,8 22,3" fill="none" stroke="#5a3418" stroke-width="4" stroke-linecap="round"/>
+      <path d="M112,93 q12,-5 22,-3" fill="none" stroke="#5a3418" stroke-width="4" stroke-linecap="round"/>
+      <!-- 螺旋暈眼 -->
+      <path d="M82,113 m-9,0 a9,9 0 1 1 4,-7" fill="none" stroke="var(--ink)" stroke-width="3"/>
+      <path d="M118,113 m-9,0 a9,9 0 1 1 4,-7" fill="none" stroke="var(--ink)" stroke-width="3"/>
+      <!-- 張大嘴 -->
+      <ellipse cx="100" cy="140" rx="13" ry="16" fill="#a02414" stroke="var(--ink)" stroke-width="3.5"/>
+      <!-- 汗滴 -->
+      <path d="M146,96 q-6,10 0,16 q6,-6 0,-16z" fill="#8fd3f4" stroke="var(--ink)" stroke-width="2.5"/>
+    </symbol>
+
+    <!-- ---------- 爸爸 廣志（認真・指著） ---------- -->
+    <symbol id="hiroshi" viewBox="0 0 210 360">
+      <path d="M84,304 h16 v52 h-16z" fill="#3a4657" stroke="var(--ink)" stroke-width="4"/>
+      <path d="M110,304 h16 v52 h-16z" fill="#3a4657" stroke="var(--ink)" stroke-width="4"/>
+      <ellipse cx="88" cy="356" rx="16" ry="8" fill="#2b2320" stroke="var(--ink)" stroke-width="4"/>
+      <ellipse cx="118" cy="356" rx="16" ry="8" fill="#2b2320" stroke="var(--ink)" stroke-width="4"/>
+      <!-- 長褲 -->
+      <path d="M62,244 h86 l-6,66 h-30 l-4,-40 -4,40 h-30z" fill="#3a4657" stroke="var(--ink)" stroke-width="4"/>
+      <!-- 襯衫 -->
+      <path d="M60,180 q45,-16 90,0 l6,70 h-102z" fill="#eef2f6" stroke="var(--ink)" stroke-width="4"/>
+      <!-- 領帶 -->
+      <path d="M100,178 l-8,10 8,44 8,-44z" fill="var(--blue)" stroke="var(--ink)" stroke-width="3"/>
+      <!-- 左手垂 -->
+      <path d="M64,196 l-14,50" stroke="#eef2f6" stroke-width="16" stroke-linecap="round" fill="none"/>
+      <circle cx="48" cy="250" r="10" fill="var(--skin)" stroke="var(--ink)" stroke-width="4"/>
+      <!-- 右手指向上 -->
+      <path d="M146,196 l22,-40" stroke="#eef2f6" stroke-width="16" stroke-linecap="round" fill="none"/>
+      <circle cx="172" cy="150" r="11" fill="var(--skin)" stroke="var(--ink)" stroke-width="4"/>
+      <path d="M172,150 l4,-20" stroke="var(--skin)" stroke-width="7" stroke-linecap="round"/>
+      <!-- 頭 -->
+      <ellipse cx="104" cy="112" rx="52" ry="50" fill="var(--skin)" stroke="var(--ink)" stroke-width="4.5"/>
+      <!-- M型短髮 -->
+      <path d="M54,96 C52,56 84,44 104,44 C124,44 156,56 154,96
+               C150,80 140,74 132,76 C130,64 118,60 104,60 C90,60 78,64 76,76 C68,74 58,80 54,96Z" fill="#1c140f"/>
+      <!-- 眉 -->
+      <path d="M74,98 q12,-4 22,0" stroke="#1c140f" stroke-width="4.5" stroke-linecap="round" fill="none"/>
+      <path d="M112,98 q12,-4 22,0" stroke="#1c140f" stroke-width="4.5" stroke-linecap="round" fill="none"/>
+      <!-- 眼 -->
+      <ellipse cx="86" cy="112" rx="9" ry="11" fill="#fff" stroke="var(--ink)" stroke-width="3"/>
+      <ellipse cx="122" cy="112" rx="9" ry="11" fill="#fff" stroke="var(--ink)" stroke-width="3"/>
+      <circle cx="87" cy="114" r="4.5" fill="#1c140f"/><circle cx="121" cy="114" r="4.5" fill="#1c140f"/>
+      <path d="M104,122 q5,5 0,9" fill="none" stroke="var(--ink)" stroke-width="2.5"/>
+      <!-- 鬍渣下巴 -->
+      <path d="M84,146 q20,12 40,0" fill="none" stroke="var(--ink)" stroke-width="3.5" stroke-linecap="round"/>
+      <path d="M80,150 q24,20 48,0" fill="none" stroke="#7fa0b8" stroke-width="6" stroke-linecap="round" opacity=".45"/>
+    </symbol>
+
+    <!-- ---------- 護照道具 ---------- -->
+    <symbol id="passport" viewBox="0 0 120 150">
+      <rect x="12" y="8" width="96" height="134" rx="8" fill="#0f5132" stroke="var(--ink)" stroke-width="4"/>
+      <circle cx="60" cy="66" r="26" fill="none" stroke="var(--yellow)" stroke-width="3"/>
+      <path d="M60,42 v48 M36,66 h48" stroke="var(--yellow)" stroke-width="2"/>
+      <text x="60" y="118" font-size="13" fill="var(--yellow)" text-anchor="middle" font-weight="900">PASSPORT</text>
+    </symbol>
+  </defs>
+</svg>
+
+<div id="stage">
+
+  <!-- =========================================================== 第 1 頁 -->
+  <section class="page active" data-p="1">
+    <div class="banner"><span class="pgno">1</span><h1>出國大計畫！新規大魔王登場</h1></div>
+    <div class="grid g4">
+      <!-- 格1 -->
+      <div class="panel" style="background:linear-gradient(#fff3d6,#ffe2a8)">
+        <svg class="scene" viewBox="0 0 400 300" preserveAspectRatio="xMidYMax meet">
+          <rect x="150" y="40" width="150" height="96" rx="6" fill="#fff" stroke="#2b2320" stroke-width="4"/>
+          <text x="225" y="78" font-size="20" text-anchor="middle" font-weight="900" fill="#e8402c">✈ 出國</text>
+          <text x="225" y="108" font-size="18" text-anchor="middle" font-weight="900" fill="#3f7fd0">旅遊手冊</text>
+          <use href="#misae" x="10" y="6" width="150" height="290"/>
+          <use href="#shinButt" x="230" y="70" width="170" height="240"/>
+        </svg>
+        <div class="bubble bl" style="left:8px;top:6px"><span class="name m">媽媽</span>：今年要全家<b>出國玩</b>！<span class="tail"></span></div>
+        <div class="sfx" style="right:6px;top:52px">動感光波～</div>
+      </div>
+      <!-- 格2 -->
+      <div class="panel" style="background:linear-gradient(#dfeffb,#bcdff6)">
+        <svg class="scene" viewBox="0 0 400 300" preserveAspectRatio="xMidYMax meet">
+          <use href="#hiroshi" x="120" y="4" width="170" height="292"/>
+          <rect x="250" y="150" width="70" height="46" rx="6" fill="#222" stroke="#2b2320" stroke-width="4" transform="rotate(-8 285 173)"/>
+          <text x="285" y="178" font-size="13" fill="#7fdcff" text-anchor="middle" transform="rotate(-8 285 173)">2026…?</text>
+        </svg>
+        <div class="bubble br" style="right:8px;top:8px"><span class="name d">爸爸</span>：2026 年好多國家改規定，<b>不是有護照就能走</b>喔。<span class="tail"></span></div>
+      </div>
+      <!-- 格3 -->
+      <div class="panel" style="background:#fff">
+        <svg class="scene" viewBox="0 0 400 300" preserveAspectRatio="xMidYMax meet">
+          <rect x="14" y="14" width="256" height="272" rx="6" fill="#fffdf3" stroke="#2b2320" stroke-width="4"/>
+          <rect x="14" y="14" width="256" height="34" fill="#e8402c"/>
+          <text x="142" y="38" font-size="16" fill="#fff" text-anchor="middle" font-weight="900">2026 入境新規總表</text>
+          <g font-size="14" font-weight="800" fill="#2b2320">
+            <text x="30" y="76">🇪🇺 歐盟 — ETIAS / EES</text>
+            <text x="30" y="104">🇬🇧 英國 — UK ETA</text>
+            <text x="30" y="132">🇯🇵 日本 — JESTA</text>
+            <text x="30" y="160">🇺🇸 美國 — ESTA</text>
+            <text x="30" y="188">🇰🇷 韓國 — K-ETA</text>
+            <text x="30" y="228" fill="#e8402c">免簽 ≠ 免申請！</text>
+          </g>
+          <use href="#shin" x="270" y="30" width="140" height="262"/>
+        </svg>
+        <div class="bubble br" style="right:6px;top:6px"><span class="name s">小新</span>：這些英文字母是新的<b>怪獸</b>嗎？<span class="tail"></span></div>
+      </div>
+      <!-- 格4 -->
+      <div class="panel" style="background:linear-gradient(#ffe0e0,#ffc2c2)">
+        <svg class="scene" viewBox="0 0 400 300" preserveAspectRatio="xMidYMax meet">
+          <use href="#misaeShock" x="120" y="2" width="170" height="298"/>
+          <path d="M60,60 l14,26 M96,44 l4,30 M320,60 l-14,26 M300,44 l-2,30" stroke="#e8402c" stroke-width="4" stroke-linecap="round"/>
+        </svg>
+        <div class="bubble bl" style="left:8px;top:6px"><span class="name m">媽媽</span>：ETIAS、ETA、ESTA…我<b>頭好暈</b>！<span class="tail"></span></div>
+        <div class="cap" style="right:8px;bottom:8px">別怕！野原一家帶你一次搞懂 →</div>
+      </div>
+    </div>
+    <div class="knowledge"><span class="k">重點</span>2026 起 <b>歐盟、英國、日本、美國、韓國</b> 陸續實施「電子旅遊授權」，<b>免簽 ≠ 免申請</b>。</div>
+  </section>
+
+  <!-- =========================================================== 第 2 頁 -->
+  <section class="page" data-p="2">
+    <div class="banner"><span class="pgno">2</span><h1>影響最大的大魔王：歐盟 ETIAS</h1></div>
+    <div class="grid g4">
+      <!-- 格1 -->
+      <div class="panel" style="background:linear-gradient(#dfeffb,#a9d4f2)">
+        <svg class="scene" viewBox="0 0 400 300" preserveAspectRatio="xMidYMax meet">
+          <circle cx="300" cy="90" r="60" fill="#0a3d91"/>
+          <g fill="var(--yellow)">
+            <circle cx="300" cy="42" r="4"/><circle cx="330" cy="52" r="4"/><circle cx="342" cy="82" r="4"/>
+            <circle cx="330" cy="112" r="4"/><circle cx="300" cy="122" r="4"/><circle cx="270" cy="112" r="4"/>
+            <circle cx="258" cy="82" r="4"/><circle cx="270" cy="52" r="4"/>
+          </g>
+          <text x="300" y="96" font-size="16" fill="#fff" text-anchor="middle" font-weight="900">EUROPE</text>
+          <use href="#hiroshi" x="30" y="4" width="170" height="292"/>
+        </svg>
+        <div class="bubble bl" style="left:8px;top:6px"><span class="name d">爸爸</span>：對台灣人影響最大的就是它——<b>ETIAS 歐洲旅遊授權</b>，2026 全面實施！<span class="tail"></span></div>
+      </div>
+      <!-- 格2 重點黑板 -->
+      <div class="panel" style="background:#fff">
+        <svg class="scene" viewBox="0 0 400 300" preserveAspectRatio="xMidYMax meet">
+          <use href="#shin" x="8" y="30" width="140" height="262"/>
+        </svg>
+        <div class="board" style="right:10px;top:14px;max-width:66%">
+          <span class="bt">📋 ETIAS 重點卡</span>
+          費用：<b>7 歐元（約 NT$250）</b><br>
+          效期：<b>3 年</b>（或到護照到期，以先到為準）<br>
+          對象：可<b>免簽入歐</b>的所有旅客（含台灣）
+        </div>
+        <div class="bubble bl" style="left:6px;bottom:10px"><span class="name s">小新</span>：小助手為你解說～<span class="tail"></span></div>
+      </div>
+      <!-- 格3 申請三步驟 -->
+      <div class="panel span2" style="background:linear-gradient(#eafbe9,#c8f0c4)">
+        <svg class="scene" viewBox="0 0 820 300" preserveAspectRatio="xMidYMax meet">
+          <g font-weight="900" font-size="15" fill="#2b2320">
+            <rect x="30" y="40" width="210" height="150" rx="10" fill="#fff" stroke="#2b2320" stroke-width="4"/>
+            <circle cx="60" cy="40" r="18" fill="var(--yellow)" stroke="#2b2320" stroke-width="4"/><text x="60" y="46" text-anchor="middle" font-size="18">1</text>
+            <text x="135" y="90" text-anchor="middle">線上填資料</text>
+            <text x="135" y="118" text-anchor="middle" font-size="13" font-weight="700">個人資料＋護照</text>
+            <text x="135" y="140" text-anchor="middle" font-size="13" font-weight="700">＋首個入境國</text>
+            <rect x="300" y="40" width="210" height="150" rx="10" fill="#fff" stroke="#2b2320" stroke-width="4"/>
+            <circle cx="330" cy="40" r="18" fill="var(--yellow)" stroke="#2b2320" stroke-width="4"/><text x="330" y="46" text-anchor="middle" font-size="18">2</text>
+            <text x="405" y="90" text-anchor="middle">快速審核</text>
+            <text x="405" y="118" text-anchor="middle" font-size="13" font-weight="700">多數幾分鐘核准</text>
+            <text x="405" y="140" text-anchor="middle" font-size="13" font-weight="700">特殊個案 4～30 天</text>
+            <rect x="570" y="40" width="210" height="150" rx="10" fill="#fff" stroke="#2b2320" stroke-width="4"/>
+            <circle cx="600" cy="40" r="18" fill="var(--yellow)" stroke="#2b2320" stroke-width="4"/><text x="600" y="46" text-anchor="middle" font-size="18">3</text>
+            <text x="675" y="90" text-anchor="middle">收確認 email</text>
+            <text x="675" y="118" text-anchor="middle" font-size="13" font-weight="700">自動連結護照</text>
+            <text x="675" y="140" text-anchor="middle" font-size="13" font-weight="700">不用印紙本</text>
+            <text x="262" y="120" font-size="34" fill="#e8402c">→</text>
+            <text x="532" y="120" font-size="34" fill="#e8402c">→</text>
+          </g>
+          <use href="#shin" x="330" y="150" width="120" height="150"/>
+        </svg>
+        <div class="cap" style="left:10px;top:6px">🖐️ 小新示範 ETIAS 申請三步驟</div>
+      </div>
+    </div>
+    <div class="knowledge"><span class="k">重點</span><b>ETIAS</b>：免簽照舊但入境前須先申請授權；<b>EES 進出境系統</b>改用<b>指紋＋臉部掃描</b>取代人工蓋章，且<b>免費</b>。</div>
+  </section>
+
+  <!-- =========================================================== 第 3 頁 -->
+  <section class="page" data-p="3">
+    <div class="banner"><span class="pgno">3</span><h1>英國 UK ETA ＆ 美國 ESTA</h1></div>
+    <div class="grid g3a">
+      <!-- 格1 英國 -->
+      <div class="panel" style="background:linear-gradient(#e7edf6,#c4d2ea)">
+        <svg class="scene" viewBox="0 0 400 300" preserveAspectRatio="xMidYMax meet">
+          <rect x="250" y="70" width="46" height="200" fill="#c9b48a" stroke="#2b2320" stroke-width="4"/>
+          <rect x="242" y="52" width="62" height="34" rx="4" fill="#e6d6ad" stroke="#2b2320" stroke-width="4"/>
+          <circle cx="273" cy="69" r="12" fill="#fff" stroke="#2b2320" stroke-width="3"/>
+          <path d="M273,69 v-8 M273,69 l6,4" stroke="#2b2320" stroke-width="2.5"/>
+          <use href="#hiroshi" x="20" y="6" width="170" height="290"/>
+        </svg>
+        <div class="bubble bl" style="left:8px;top:6px"><span class="name d">爸爸</span>：去英國要辦 <b>UK ETA</b>，2025/1/8 起台灣旅客適用。<span class="tail"></span></div>
+        <div class="board" style="right:8px;bottom:8px;max-width:56%">
+          <span class="bt">🇬🇧 UK ETA</span>費用 <b>£10（約 NT$420）</b><br>效期 <b>2 年</b>・可多次入境
+        </div>
+      </div>
+      <!-- 格2 美國 -->
+      <div class="panel" style="background:linear-gradient(#fbeaea,#f3c9c9)">
+        <svg class="scene" viewBox="0 0 400 300" preserveAspectRatio="xMidYMax meet">
+          <g transform="translate(280,60)">
+            <path d="M0,30 l14,-30 14,30z" fill="#7fc9a8" stroke="#2b2320" stroke-width="3"/>
+            <rect x="8" y="30" width="12" height="150" fill="#7fc9a8" stroke="#2b2320" stroke-width="3"/>
+            <path d="M14,0 l-4,-18 8,0z" fill="var(--yellow)" stroke="#2b2320" stroke-width="2"/>
+          </g>
+          <use href="#misae" x="30" y="6" width="160" height="290"/>
+        </svg>
+        <div class="bubble bl" style="left:8px;top:6px"><span class="name m">媽媽</span>：美國 <b>ESTA</b> 早就有了，台灣規定不變！<span class="tail"></span></div>
+        <div class="board" style="right:8px;bottom:8px;max-width:56%">
+          <span class="bt">🇺🇸 ESTA</span>費用 <b>US$21（約 NT$680）</b><br>效期 <b>2 年</b>・出發前<b>至少 72 小時</b>完成
+        </div>
+      </div>
+      <!-- 格3 span2 小新搞笑 -->
+      <div class="panel span2" style="background:linear-gradient(#fff6d9,#ffe8a3)">
+        <svg class="scene" viewBox="0 0 820 260" preserveAspectRatio="xMidYMax meet">
+          <use href="#shin" x="60" y="10" width="150" height="250"/>
+          <use href="#misae" x="560" y="6" width="160" height="254"/>
+          <text x="150" y="60" font-size="40">🍦</text>
+          <path d="M300,110 q120,-30 230,0" stroke="#e8402c" stroke-width="4" fill="none" stroke-dasharray="6 6"/>
+          <text x="415" y="150" font-size="36" fill="#e8402c" text-anchor="middle">💢</text>
+        </svg>
+        <div class="bubble bl" style="left:180px;top:6px"><span class="name s">小新</span>：72 小時？那我<b>現在就先申請</b>，就能吃三天美國冰淇淋！<span class="tail"></span></div>
+        <div class="bubble br" style="right:12px;top:6px"><span class="name m">媽媽</span>：重點不是冰淇淋啦！<span class="tail"></span></div>
+        <div class="sfx" style="left:46%;top:40%">碰！</div>
+      </div>
+    </div>
+    <div class="knowledge"><span class="k">重點</span><b>英國 ETA</b>：£10／效期 2 年。　<b>美國 ESTA</b>：US$21／效期 2 年／出發前至少 <b>72 小時</b>完成。</div>
+  </section>
+
+  <!-- =========================================================== 第 4 頁 -->
+  <section class="page" data-p="4">
+    <div class="banner"><span class="pgno">4</span><h1>日本 JESTA ＆ 韓國 K-ETA</h1></div>
+    <div class="grid g4">
+      <!-- 格1 日本 -->
+      <div class="panel" style="background:linear-gradient(#eaf4ff,#cfe6fb)">
+        <svg class="scene" viewBox="0 0 400 300" preserveAspectRatio="xMidYMax meet">
+          <path d="M210,150 q90,-96 180,0 q-40,-26 -90,-26 q-50,0 -90,26z" fill="#fff" stroke="#2b2320" stroke-width="4"/>
+          <path d="M262,124 l24,-14 24,14" fill="#6aa6e0"/>
+          <circle cx="360" cy="60" r="20" fill="#e8402c"/>
+          <g fill="#ff9ec2"><circle cx="230" cy="70" r="5"/><circle cx="250" cy="55" r="5"/><circle cx="215" cy="90" r="5"/></g>
+          <use href="#shinButt" x="10" y="60" width="180" height="240"/>
+        </svg>
+        <div class="bubble bl" style="left:8px;top:6px"><span class="name s">小新</span>：我要去日本<b>吃拉麵</b>！🍜<span class="tail"></span></div>
+        <div class="cap" style="right:8px;bottom:8px;max-width:60%"><span class="name d">爸爸</span>：2026 起日本推 <b>JESTA</b>，入境前須<b>申報行程與目的</b>，費用<b>待定</b>，防非法滯留。</div>
+      </div>
+      <!-- 格2 韓國 -->
+      <div class="panel" style="background:linear-gradient(#fbeef4,#f5cfe0)">
+        <svg class="scene" viewBox="0 0 400 300" preserveAspectRatio="xMidYMax meet">
+          <use href="#misae" x="30" y="6" width="160" height="290"/>
+          <g transform="translate(250,120)">
+            <ellipse cx="60" cy="60" rx="60" ry="40" fill="#fff" stroke="#2b2320" stroke-width="4"/>
+            <path d="M20,50 q40,26 80,0 q-8,20 -40,20 q-32,0 -40,-20z" fill="#e8402c"/>
+            <text x="60" y="108" font-size="14" text-anchor="middle" font-weight="900" fill="#2b2320">泡菜</text>
+          </g>
+        </svg>
+        <div class="bubble bl" style="left:8px;top:6px"><span class="name m">媽媽</span>：韓國的 <b>K-ETA</b>，費用約 <b>10,000 韓元（NT$240）</b>。<span class="tail"></span></div>
+      </div>
+      <!-- 格3 提醒 -->
+      <div class="panel" style="background:linear-gradient(#fff2e0,#ffdcb0)">
+        <svg class="scene" viewBox="0 0 400 300" preserveAspectRatio="xMidYMax meet">
+          <use href="#hiroshi" x="20" y="6" width="170" height="290"/>
+          <g transform="translate(230,70)">
+            <path d="M60,0 l66,120 h-132z" fill="var(--yellow)" stroke="#2b2320" stroke-width="5"/>
+            <text x="60" y="86" font-size="46" text-anchor="middle" font-weight="900" fill="#2b2320">!</text>
+          </g>
+        </svg>
+        <div class="bubble br" style="right:8px;bottom:10px;max-width:60%"><span class="name d">爸爸</span>：注意！台灣旅客原本<b>限時免除到 2024 年底</b>，之後是否恢復要求，<b>要看最新公告</b>。<span class="tail"></span></div>
+      </div>
+      <!-- 格4 小新耍寶 -->
+      <div class="panel" style="background:linear-gradient(#eafbe9,#c8f0c4)">
+        <svg class="scene" viewBox="0 0 400 300" preserveAspectRatio="xMidYMax meet">
+          <use href="#shin" x="70" y="10" width="150" height="286"/>
+          <use href="#passport" x="230" y="120" width="90" height="120" transform="rotate(12 275 180)"/>
+          <text x="330" y="80" font-size="30">😆</text>
+        </svg>
+        <div class="bubble bl" style="left:8px;top:6px"><span class="name s">小新</span>：規定變來變去，護照都快變成<b>魔法卡片</b>了！<span class="tail"></span></div>
+        <div class="sfx" style="right:14px;bottom:14px">哈哈哈</div>
+      </div>
+    </div>
+    <div class="knowledge"><span class="k">重點</span><b>日本 JESTA</b>：須申報行程、費用待定。　<b>韓國 K-ETA</b>：約 NT$240，對台是否恢復要求需留意公告。</div>
+  </section>
+
+  <!-- =========================================================== 第 5 頁 -->
+  <section class="page" data-p="5">
+    <div class="banner"><span class="pgno">5</span><h1>專家三大叮嚀・平安出遊！</h1></div>
+    <div class="grid g4">
+      <!-- 格1 護照 -->
+      <div class="panel" style="background:linear-gradient(#e9f6ff,#c9e6fb)">
+        <svg class="scene" viewBox="0 0 400 300" preserveAspectRatio="xMidYMax meet">
+          <use href="#hiroshi" x="10" y="6" width="170" height="290"/>
+          <use href="#passport" x="240" y="90" width="120" height="150"/>
+          <text x="300" y="70" font-size="26" fill="#e8402c" font-weight="900">①</text>
+        </svg>
+        <div class="bubble bl" style="left:8px;top:6px"><span class="name d">爸爸</span>：第一，電子授權都<b>跟護照綁定</b>，換新護照就要<b>重新申請</b>！<span class="tail"></span></div>
+      </div>
+      <!-- 格2 月曆 -->
+      <div class="panel" style="background:linear-gradient(#fff7e0,#ffe6a8)">
+        <svg class="scene" viewBox="0 0 400 300" preserveAspectRatio="xMidYMax meet">
+          <use href="#misae" x="20" y="6" width="160" height="290"/>
+          <g transform="translate(228,64)">
+            <rect x="0" y="0" width="150" height="150" rx="8" fill="#fff" stroke="#2b2320" stroke-width="4"/>
+            <rect x="0" y="0" width="150" height="34" fill="#e8402c"/>
+            <text x="75" y="24" font-size="16" text-anchor="middle" fill="#fff" font-weight="900">出發月曆</text>
+            <g fill="#2b2320" font-size="13" font-weight="800">
+              <text x="18" y="66">一 二 三 四 五</text>
+            </g>
+            <circle cx="30" cy="104" r="15" fill="var(--green)"/><text x="30" y="109" font-size="13" text-anchor="middle" fill="#fff" font-weight="900">辦</text>
+            <text x="118" y="130" font-size="30">✈</text>
+            <path d="M46,104 h60" stroke="#e8402c" stroke-width="4" stroke-dasharray="5 5"/>
+            <text x="60" y="140" font-size="13" font-weight="900" fill="#e8402c">≥ 1 週</text>
+          </g>
+          <text x="300" y="52" font-size="26" fill="#e8402c" font-weight="900">②</text>
+        </svg>
+        <div class="bubble bl" style="left:8px;top:6px"><span class="name m">媽媽</span>：第二，<b>提前申請</b>！雖多數幾分鐘就過，仍建議出發前<b>至少 1 週</b>辦好。<span class="tail"></span></div>
+      </div>
+      <!-- 格3 防詐騙 -->
+      <div class="panel" style="background:linear-gradient(#eafbe9,#c5eec0)">
+        <svg class="scene" viewBox="0 0 400 300" preserveAspectRatio="xMidYMax meet">
+          <use href="#shin" x="10" y="10" width="150" height="286"/>
+          <g transform="translate(210,80)">
+            <rect x="0" y="0" width="170" height="70" rx="8" fill="#fff" stroke="#2b2320" stroke-width="4"/>
+            <text x="85" y="32" font-size="17" text-anchor="middle" font-weight="900" fill="var(--green)">官方 .gov</text>
+            <text x="85" y="56" font-size="17" text-anchor="middle" font-weight="900" fill="var(--green)">/ .eu ✔</text>
+            <g transform="translate(30,90)">
+              <rect x="0" y="0" width="150" height="56" rx="8" fill="#f2d0d0" stroke="#2b2320" stroke-width="4"/>
+              <text x="75" y="36" font-size="15" text-anchor="middle" font-weight="900" fill="#c0392b">代辦網站 ✘</text>
+              <path d="M2,2 L152,56 M152,2 L2,56" stroke="#c0392b" stroke-width="3"/>
+            </g>
+          </g>
+          <text x="330" y="60" font-size="26" fill="#e8402c" font-weight="900">③</text>
+        </svg>
+        <div class="bubble bl" style="left:8px;top:6px"><span class="name s">小新</span>：第三，只認<b>官方網站</b>！別被代辦網站收<b>高額手續費</b>～<span class="tail"></span></div>
+      </div>
+      <!-- 格4 全家合照 -->
+      <div class="panel" style="background:linear-gradient(#fff0d6,#ffd98f)">
+        <svg class="scene" viewBox="0 0 400 300" preserveAspectRatio="xMidYMax meet">
+          <circle cx="330" cy="52" r="30" fill="var(--yellow)"/>
+          <g stroke="var(--yellow)" stroke-width="4"><path d="M330,8 v-6 M368,20 l4,-4 M380,52 h6 M368,84 l4,4"/></g>
+          <use href="#hiroshi" x="8" y="20" width="150" height="280"/>
+          <use href="#shin" x="150" y="70" width="120" height="228"/>
+          <use href="#misae" x="250" y="24" width="150" height="276"/>
+        </svg>
+        <div class="bubble bl" style="left:8px;top:6px">全家：規定搞懂了，<b>開心出國去</b>！🎉<span class="tail"></span></div>
+        <div class="cap" style="left:50%;bottom:8px;transform:translateX(-50%);max-width:88%;text-align:center">出發前請再次確認各國外交部官網喔！</div>
+      </div>
+    </div>
+    <div class="knowledge"><span class="k">重點</span>① 授權綁護照、<b>換照重辦</b>　② 提前<b>至少 1 週</b>　③ 只用<b>官方網站</b>防詐騙。</div>
+  </section>
+
+</div>
+
+<div id="nav">
+  <button id="prev">◀ 上一頁</button>
+  <span id="dots"></span>
+  <button id="next">下一頁 ▶</button>
+</div>
+
+<script>
+  const pages=[...document.querySelectorAll('.page')];
+  const dots=document.getElementById('dots');
+  let cur=0;
+  pages.forEach((_,i)=>{
+    const d=document.createElement('span');d.className='dot'+(i===0?' on':'');
+    d.onclick=()=>go(i);dots.appendChild(d);
+  });
+  const dotEls=[...dots.children];
+  function go(n){
+    cur=Math.max(0,Math.min(pages.length-1,n));
+    pages.forEach((p,i)=>p.classList.toggle('active',i===cur));
+    dotEls.forEach((d,i)=>d.classList.toggle('on',i===cur));
+  }
+  document.getElementById('prev').onclick=()=>go(cur-1);
+  document.getElementById('next').onclick=()=>go(cur+1);
+  addEventListener('keydown',e=>{
+    if(e.key==='ArrowRight'||e.key===' ')go(cur+1);
+    if(e.key==='ArrowLeft')go(cur-1);
+  });
+</script>

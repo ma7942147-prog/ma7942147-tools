@@ -19,6 +19,7 @@
 - **mv-creator**：MV 創作追蹤器（主題→歌詞→曲風→Suno→Grok 影片）
 - **edu-video-maker**：影音教學 Agent 工作室（腳本→語音→影片）
 - **telegram-notifier**：共用的 Telegram 通知基礎設施（`/functions` + `tools/shared/telegram-notify.js`），部署步驟見 `tools/telegram-notifier/README.md`；bot 是 @ma7942147_bot
+- **shin-chan-travel-comic**：蠟筆小新風格的 2026 旅遊入境新規漫畫（5 頁全彩 HTML 投影片，內嵌手繪 SVG）
 
 ## 工作注意事項
 - 個人資料一律去識別化
