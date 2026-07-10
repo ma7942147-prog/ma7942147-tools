@@ -650,8 +650,58 @@ generateVoiceBtn.addEventListener("click", async () => {
     } finally {
       generateVoiceBtn.disabled = false;
     }
+  } else if (api === "gtts") {
+    // Browser built-in speech synthesis (Google voices on Chrome): free, no API key,
+    // but plays directly instead of producing a downloadable audio file
+    if (speechSynthesis.speaking) {
+      speechSynthesis.cancel();
+      generateVoiceBtn.textContent = "🎙️ Agent B：生成旁白";
+      voiceStatus.textContent = "已停止朗讀";
+      return;
+    }
+
+    const zhVoice = speechSynthesis.getVoices().find(v => v.lang.replace("_", "-").startsWith("zh"));
+    let idx = 0;
+
+    // Chrome silently stops long utterances (~15s); periodic pause/resume keeps it alive
+    const keepAlive = setInterval(() => {
+      if (!speechSynthesis.speaking) { clearInterval(keepAlive); return; }
+      speechSynthesis.pause();
+      speechSynthesis.resume();
+    }, 10000);
+
+    const finish = (msg) => {
+      clearInterval(keepAlive);
+      generateVoiceBtn.textContent = "🎙️ Agent B：生成旁白";
+      voiceStatus.textContent = msg;
+    };
+
+    const speakNext = () => {
+      if (idx >= parsedSegments.length) {
+        finish("✅ 旁白朗讀完成（瀏覽器語音無法存成音檔，需要 MP3 請改用 ElevenLabs）");
+        document.getElementById("badge-c").classList.add("active");
+        sectionC.style.opacity = "1";
+        sectionC.style.pointerEvents = "auto";
+        document.getElementById("generateVideoBtn").disabled = false;
+        return;
+      }
+      const seg = parsedSegments[idx];
+      const utter = new SpeechSynthesisUtterance(seg.script);
+      utter.lang = "zh-TW";
+      if (zhVoice) utter.voice = zhVoice;
+      utter.onend = () => { idx++; speakNext(); };
+      utter.onerror = (e) => {
+        if (e.error === "canceled" || e.error === "interrupted") return;
+        finish("❌ 瀏覽器語音合成失敗：" + e.error);
+      };
+      voiceStatus.textContent = `🔊 朗讀中（第 ${idx + 1}/${parsedSegments.length} 段：${seg.title}）— 再按一次可停止`;
+      speechSynthesis.speak(utter);
+    };
+
+    generateVoiceBtn.textContent = "⏹ 停止朗讀";
+    speakNext();
   } else {
-    voiceStatus.textContent = "⚠️ 目前僅支援 ElevenLabs，Fish Audio 和 Google TTS 整合開發中";
+    voiceStatus.textContent = "⚠️ Fish Audio 整合開發中，請先使用 ElevenLabs 或 Google TTS";
   }
 });
 
