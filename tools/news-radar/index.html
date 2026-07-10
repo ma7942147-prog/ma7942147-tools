@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>📡 新聞雷達</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, "Segoe UI", "PingFang TC", "Microsoft JhengHei", sans-serif;
+    background: #0f0f13;
+    color: #eee;
+    padding: 24px;
+  }
+  h1 { text-align: center; margin-bottom: 4px; font-size: 22px; }
+  .subtitle { text-align: center; color: #888; margin-bottom: 28px; font-size: 13px; }
+  .container { max-width: 1000px; margin: 0 auto; }
+
+  select, input, textarea, button {
+    font-family: inherit; font-size: 14px;
+    background: #1e1e1e; color: #eee; border: 1px solid #333;
+    border-radius: 6px; padding: 8px 12px;
+  }
+  button { cursor: pointer; background: #2d9c6e; color: #fff; border: none; font-weight: 600; }
+  button:hover { background: #38c47f; }
+  button.secondary { background: #2a2a2a; color: #eee; }
+  button.secondary:hover { background: #3a3a3a; }
+  button:disabled { opacity: 0.4; cursor: not-allowed; background: #2a2a2a; }
+  label { display: block; font-size: 12px; color: #888; margin: 10px 0 4px; }
+  input[type=text], input[type=password], textarea, select { width: 100%; }
+  textarea { resize: vertical; min-height: 60px; }
+
+  .section {
+    background: #161620; border: 1px solid #252530; border-radius: 12px;
+    padding: 20px; margin-bottom: 18px;
+  }
+  .section h2 { margin: 0 0 12px; font-size: 16px; }
+  .row { display: flex; gap: 12px; flex-wrap: wrap; }
+  .row > div { flex: 1; min-width: 200px; }
+
+  .checks { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 6px; }
+  .checks label { display: flex; align-items: center; gap: 6px; margin: 0; font-size: 13px; color: #ccc; cursor: pointer; }
+  .checks input { width: auto; }
+
+  .topbar { display: flex; gap: 8px; margin-bottom: 18px; flex-wrap: wrap; align-items: center; }
+  .topbar select { flex: 1; min-width: 200px; }
+
+  /* Report layout：左清單 + 右詳情，仿 Horizon 截圖 */
+  .report { display: none; grid-template-columns: 1fr 1fr; gap: 18px; }
+  .report.visible { display: grid; }
+  @media (max-width: 760px) { .report { grid-template-columns: 1fr; } }
+  .panel {
+    background: #161620; border: 1px solid #252530; border-radius: 12px; padding: 16px;
+  }
+  .panel h3 { margin: 0 0 12px; font-size: 14px; text-align: center; color: #ccc; }
+  .report-meta {
+    font-size: 12px; color: #f59e0b; border-left: 3px solid #f59e0b;
+    padding: 6px 10px; background: #1a160e; border-radius: 4px; margin-bottom: 12px;
+  }
+  .news-item {
+    display: flex; align-items: flex-start; gap: 8px;
+    padding: 8px 10px; border-radius: 6px; cursor: pointer;
+    font-size: 13px; line-height: 1.5; color: #cdd6f4;
+  }
+  .news-item:hover { background: #1e1e2c; }
+  .news-item.active { background: #1e3a2f; }
+  .news-item .idx { color: #666; flex-shrink: 0; }
+  .score {
+    flex-shrink: 0; font-size: 11px; font-weight: 700; color: #fff;
+    background: #c0392b; border-radius: 4px; padding: 1px 6px; margin-left: auto;
+  }
+  .score.hi { background: #e74c3c; }
+
+  .detail-title { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 10px; }
+  .detail-title h4 { margin: 0; font-size: 16px; color: #7ab8f5; flex: 1; line-height: 1.4; }
+  .detail-block { font-size: 13px; line-height: 1.7; color: #ccc; margin-bottom: 12px; }
+  .detail-block .blk-label { color: #4ade9c; font-weight: 700; font-size: 12px; }
+  .detail-src { font-size: 12px; color: #666; margin-bottom: 12px; }
+  .detail-src a { color: #4ade9c; }
+  .tags { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+  .tag {
+    font-size: 11px; padding: 2px 8px; border-radius: 4px;
+    background: #1e3a2f; color: #4ade9c; border: 1px solid #2d9c6e;
+  }
+  .lang-toggle { display: flex; gap: 6px; margin-bottom: 12px; }
+  .lang-toggle button { font-size: 12px; padding: 4px 12px; }
+  .lang-toggle button.on { background: #2d9c6e; color: #fff; }
+  .lang-toggle button.off { background: #2a2a2a; color: #999; }
+
+  .status-bar { text-align: center; color: #666; font-size: 13px; margin: 16px 0; }
+  .generating { color: #f59e0b; animation: pulse 1s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
+  .hint { font-size: 12px; color: #666; text-align: center; padding: 30px 10px; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>📡 新聞雷達</h1>
+  <div class="subtitle">你只需要享受新聞，剩下交給雷達。抓取來源 → AI 評分選重點 → 中英雙語日報</div>
+
+  <!-- 設定 -->
+  <div class="section">
+    <h2>⚙️ 雷達設定</h2>
+    <div class="row">
+      <div>
+        <label>新聞來源</label>
+        <div class="checks">
+          <label><input type="checkbox" id="srcHnFront" checked /> Hacker News 首頁</label>
+          <label><input type="checkbox" id="srcHnBest" /> Hacker News 最佳</label>
+        </div>
+        <label>自訂 RSS（每行一個網址，可空）</label>
+        <textarea id="customFeeds" placeholder="https://example.com/feed.xml"></textarea>
+      </div>
+      <div>
+        <label>特別關注的主題（可空，AI 評分時會加權）</label>
+        <input type="text" id="keywords" placeholder="例如：AI Agent、教育科技、開源工具" />
+        <label>日報選出條數</label>
+        <select id="pickCount">
+          <option value="8">8 條（快速瀏覽）</option>
+          <option value="12" selected>12 條（標準）</option>
+          <option value="16">16 條（完整）</option>
+        </select>
+        <label>Gemini API Key <span style="color:#666;">（存在瀏覽器，不會上傳）</span></label>
+        <input type="password" id="geminiKey" placeholder="貼入你的 Gemini API Key" />
+      </div>
+    </div>
+    <div style="margin-top:14px; display:flex; gap:10px; flex-wrap:wrap;">
+      <button id="scanBtn">📡 掃描並生成日報</button>
+    </div>
+  </div>
+
+  <!-- 歷史日報 -->
+  <div class="topbar">
+    <span style="font-size:13px; color:#888;">歷史日報：</span>
+    <select id="reportSelect"><option value="">（尚無日報）</option></select>
+    <button class="secondary" id="deleteReportBtn">刪除此份</button>
+  </div>
+
+  <div class="status-bar" id="statusBar">設定好來源後，按「掃描並生成日報」</div>
+
+  <!-- 日報：左清單 + 右詳情 -->
+  <div class="report" id="report">
+    <div class="panel">
+      <h3>按優先級排序的日報</h3>
+      <div class="report-meta" id="reportMeta"></div>
+      <div id="newsList"></div>
+    </div>
+    <div class="panel">
+      <h3>背景、總結與評論</h3>
+      <div id="detailPane"><div class="hint">點左邊任一條新聞，AI 會生成深度解讀（背景／總結／社區討論／中英雙語）</div></div>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
+import {
+  getFirestore, collection, doc, setDoc, getDocs, deleteDoc, serverTimestamp
+} from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
+import { notifyTelegram } from "../shared/telegram-notify.js";
+
+const firebaseConfig = {
+  projectId: "my-teaching-tools-77014",
+  appId: "1:481324807967:web:45ddd27a77cc6b127ae22a",
+  storageBucket: "my-teaching-tools-77014.firebasestorage.app",
+  apiKey: "AIzaSyDkKK9qKfne8HqrnA_efseOPYAyQihC2ns",
+  authDomain: "my-teaching-tools-77014.firebaseapp.com",
+  messagingSenderId: "481324807967"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const COL = "news_radar_reports";
+
+let GEMINI_API_KEY = localStorage.getItem("gemini_api_key") || "";
+const getGeminiUrl = () => `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
+
+// UI refs
+const statusBar = document.getElementById("statusBar");
+const scanBtn = document.getElementById("scanBtn");
+const reportEl = document.getElementById("report");
+const reportMeta = document.getElementById("reportMeta");
+const newsList = document.getElementById("newsList");
+const detailPane = document.getElementById("detailPane");
+const reportSelect = document.getElementById("reportSelect");
+
+let currentReport = null;   // { id, totalFetched, items: [...] }
+let activeIndex = -1;
+let detailLang = "zh";
+
+function setStatus(text, generating = false) {
+  statusBar.className = generating ? "status-bar generating" : "status-bar";
+  statusBar.textContent = text;
+}
+
+async function callGemini(prompt, maxTokens = 4096) {
+  const res = await fetch(getGeminiUrl(), {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      contents: [{ parts: [{ text: prompt }] }],
+      generationConfig: { temperature: 0.4, maxOutputTokens: maxTokens }
+    })
+  });
+  const json = await res.json();
+  if (json.error) throw new Error(json.error.message || "Gemini API 錯誤");
+  const text = json.candidates?.[0]?.content?.parts?.[0]?.text || "";
+  const clean = text.replace(/```json?\n?/g, "").replace(/```/g, "").trim();
+  return JSON.parse(clean);
+}
+
+// --- 抓取來源 ---
+async function fetchHNFront() {
+  const res = await fetch("https://hn.algolia.com/api/v1/search?tags=front_page&hitsPerPage=30");
+  const json = await res.json();
+  return json.hits.map(h => ({
+    source: "HN首頁", hnId: h.objectID,
+    title: h.title,
+    url: h.url || `https://news.ycombinator.com/item?id=${h.objectID}`,
+    discussUrl: `https://news.ycombinator.com/item?id=${h.objectID}`,
+    points: h.points || 0, comments: h.num_comments || 0
+  }));
+}
+
+async function fetchHNBest() {
+  const res = await fetch("https://hn.algolia.com/api/v1/search?tags=story&numericFilters=points%3E200&hitsPerPage=20");
+  const json = await res.json();
+  return json.hits.map(h => ({
+    source: "HN最佳", hnId: h.objectID,
+    title: h.title,
+    url: h.url || `https://news.ycombinator.com/item?id=${h.objectID}`,
+    discussUrl: `https://news.ycombinator.com/item?id=${h.objectID}`,
+    points: h.points || 0, comments: h.num_comments || 0
+  }));
+}
+
+async function fetchRSS(feedUrl) {
+  // 一般 RSS 沒開 CORS，透過 allorigins 代理抓
+  const res = await fetch("https://api.allorigins.win/raw?url=" + encodeURIComponent(feedUrl));
+  const xml = new DOMParser().parseFromString(await res.text(), "text/xml");
+  const items = [...xml.querySelectorAll("item, entry")].slice(0, 15);
+  const host = new URL(feedUrl).hostname.replace("www.", "");
+  return items.map(it => ({
+    source: host, hnId: null,
+    title: it.querySelector("title")?.textContent?.trim() || "(無標題)",
+    url: it.querySelector("link")?.getAttribute("href") || it.querySelector("link")?.textContent?.trim() || feedUrl,
+    discussUrl: null, points: 0, comments: 0
+  }));
+}
+
+async function gatherAll() {
+  const tasks = [];
+  if (document.getElementById("srcHnFront").checked) tasks.push(fetchHNFront());
+  if (document.getElementById("srcHnBest").checked) tasks.push(fetchHNBest());
+  const feeds = document.getElementById("customFeeds").value.split("\n").map(s => s.trim()).filter(Boolean);
+  feeds.forEach(f => tasks.push(fetchRSS(f).catch(err => {
+    console.warn("RSS 抓取失敗：", f, err);
+    return [];
+  })));
+  if (tasks.length === 0) throw new Error("請至少勾選一個來源");
+  const all = (await Promise.all(tasks)).flat();
+  // 以網址去重
+  const seen = new Set();
+  return all.filter(it => {
+    if (seen.has(it.url)) return false;
+    seen.add(it.url);
+    return true;
+  });
+}
+
+// --- 掃描 + AI 評分選重點 ---
+scanBtn.addEventListener("click", async () => {
+  GEMINI_API_KEY = document.getElementById("geminiKey").value.trim();
+  if (!GEMINI_API_KEY) { document.getElementById("geminiKey").focus(); setStatus("⚠️ 請輸入 Gemini API Key"); return; }
+  localStorage.setItem("gemini_api_key", GEMINI_API_KEY);
+  localStorage.setItem("radar_feeds", document.getElementById("customFeeds").value);
+  localStorage.setItem("radar_keywords", document.getElementById("keywords").value);
+
+  scanBtn.disabled = true;
+  scanBtn.textContent = "⏳ 掃描中...";
+  try {
+    setStatus("📡 正在抓取新聞來源...", true);
+    const fetched = await gatherAll();
+    if (fetched.length === 0) throw new Error("沒抓到任何新聞，請檢查來源設定");
+
+    const pickCount = parseInt(document.getElementById("pickCount").value, 10);
+    const keywords = document.getElementById("keywords").value.trim();
+    setStatus(`🤖 AI 正在從 ${fetched.length} 條中評分選出 ${pickCount} 條重點...`, true);
+
+    const listText = fetched.map((it, i) =>
+      `${i + 1}. [${it.source}] ${it.title}（讚 ${it.points}，留言 ${it.comments}）`
+    ).join("\n");
+
+    const prompt = `你是一位科技新聞主編，為台灣讀者編每日科技日報。
+從下列 ${fetched.length} 條新聞中選出最重要的 ${pickCount} 條，依重要性給 1.0-10.0 分（一位小數）。
+評分考量：技術影響力、新穎性、對一般開發者與 AI 學習者的實用價值${keywords ? `。讀者特別關注：${keywords}，相關條目請加權` : ""}。
+
+新聞清單：
+${listText}
+
+只輸出 JSON，格式：
+{"selected":[{"index":1,"score":9.0,"zhTitle":"翻成繁體中文的標題（保留產品名等專有名詞原文）"}]}
+按分數由高到低排序，index 對應上方清單編號。`;
+
+    const result = await callGemini(prompt);
+    const items = (result.selected || [])
+      .filter(s => fetched[s.index - 1])
+      .map(s => ({ ...fetched[s.index - 1], score: s.score, zhTitle: s.zhTitle, detail: null }));
+    if (items.length === 0) throw new Error("AI 沒有選出任何條目，請重試");
+
+    const now = new Date();
+    const dateLabel = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")} ${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+    currentReport = {
+      id: "radar_" + Date.now(),
+      dateLabel, keywords,
+      totalFetched: fetched.length,
+      items
+    };
+    await saveReport();
+    renderReport();
+    await loadReportList(currentReport.id);
+    setStatus(`✅ 日報生成完成（${dateLabel}）`);
+    notifyTelegram(`📡 新聞雷達日報完成：從 ${fetched.length} 條中選出 ${items.length} 條重點`);
+  } catch (err) {
+    setStatus("❌ " + err.message);
+  } finally {
+    scanBtn.disabled = false;
+    scanBtn.textContent = "📡 掃描並生成日報";
+  }
+});
+
+async function saveReport() {
+  const { id, ...data } = currentReport;
+  await setDoc(doc(db, COL, id), { ...data, updatedAt: serverTimestamp() }, { merge: true });
+}
+
+// --- 渲染日報清單 ---
+function renderReport() {
+  reportEl.classList.add("visible");
+  reportMeta.textContent = `從 ${currentReport.totalFetched} 條資訊中選出 ${currentReport.items.length} 條重點（${currentReport.dateLabel}）`;
+  newsList.innerHTML = "";
+  currentReport.items.forEach((it, i) => {
+    const row = document.createElement("div");
+    row.className = "news-item" + (i === activeIndex ? " active" : "");
+    row.innerHTML = `
+      <span class="idx">${i + 1}.</span>
+      <span>${it.zhTitle || it.title}</span>
+      <span class="score ${it.score >= 8.5 ? "hi" : ""}">${Number(it.score).toFixed(1)}</span>
+    `;
+    row.addEventListener("click", () => openDetail(i));
+    newsList.appendChild(row);
+  });
+  detailPane.innerHTML = `<div class="hint">點左邊任一條新聞，AI 會生成深度解讀（背景／總結／社區討論／中英雙語）</div>`;
+}
+
+// --- 詳情：背景、總結與評論（中英雙語） ---
+async function openDetail(i) {
+  activeIndex = i;
+  [...newsList.children].forEach((el, j) => el.classList.toggle("active", j === i));
+  const it = currentReport.items[i];
+
+  if (!it.detail) {
+    detailPane.innerHTML = `<div class="hint generating">🤖 AI 正在生成「${it.zhTitle || it.title}」的深度解讀...</div>`;
+    try {
+      let commentText = "";
+      if (it.hnId) {
+        try {
+          const res = await fetch(`https://hn.algolia.com/api/v1/items/${it.hnId}`);
+          const item = await res.json();
+          commentText = (item.children || []).slice(0, 8)
+            .map(c => (c.text || "").replace(/<[^>]+>/g, " ").slice(0, 300))
+            .filter(Boolean).join("\n---\n");
+        } catch { /* 沒抓到留言就跳過 */ }
+      }
+      const prompt = `你是一位科技新聞編輯，請為以下新聞生成中英雙語深度解讀。
+【標題】${it.title}
+【來源】${it.source}（讚 ${it.points}，留言 ${it.comments}）
+【連結】${it.url}
+${commentText ? `【讀者熱門留言摘錄】\n${commentText}` : ""}
+
+只輸出 JSON，格式：
+{
+  "zh": {"summary":"總結（150字內，繁體中文）","background":"背景脈絡（120字內）","community":"社區討論重點與整體情緒（100字內${commentText ? "" : "，若無留言資料請根據主題推測可能的討論焦點並註明是推測"}）"},
+  "en": {"summary":"...","background":"...","community":"..."},
+  "tags": ["最多5個英文小寫標籤"]
+}`;
+      it.detail = await callGemini(prompt, 2048);
+      await saveReport();
+    } catch (err) {
+      detailPane.innerHTML = `<div class="hint">❌ 生成失敗：${err.message}（再點一次重試）</div>`;
+      return;
+    }
+  }
+  renderDetail(it);
+}
+
+function renderDetail(it) {
+  const d = it.detail;
+  const t = detailLang === "zh" ? d.zh : d.en;
+  const labels = detailLang === "zh"
+    ? { s: "總結", b: "背景", c: "社區討論" }
+    : { s: "Summary", b: "Background", c: "Community" };
+  detailPane.innerHTML = `
+    <div class="lang-toggle">
+      <button id="langZh" class="${detailLang === "zh" ? "on" : "off"}">中文</button>
+      <button id="langEn" class="${detailLang === "en" ? "on" : "off"}">English</button>
+    </div>
+    <div class="detail-title">
+      <h4>${detailLang === "zh" ? (it.zhTitle || it.title) : it.title}</h4>
+      <span class="score ${it.score >= 8.5 ? "hi" : ""}">${Number(it.score).toFixed(1)}</span>
+    </div>
+    <div class="detail-src">
+      ${it.source}｜<a href="${it.url}" target="_blank">原文連結</a>${it.discussUrl ? `｜<a href="${it.discussUrl}" target="_blank">HN 討論串</a>` : ""}
+    </div>
+    <div class="detail-block"><span class="blk-label">${labels.s}：</span>${t.summary}</div>
+    <div class="detail-block"><span class="blk-label">${labels.b}：</span>${t.background}</div>
+    <div class="detail-block"><span class="blk-label">${labels.c}：</span>${t.community}</div>
+    <div class="tags">${(d.tags || []).map(tag => `<span class="tag">#${tag}</span>`).join("")}</div>
+  `;
+  document.getElementById("langZh").addEventListener("click", () => { detailLang = "zh"; renderDetail(it); });
+  document.getElementById("langEn").addEventListener("click", () => { detailLang = "en"; renderDetail(it); });
+}
+
+// --- 歷史日報 ---
+async function loadReportList(selectId) {
+  const snap = await getDocs(collection(db, COL));
+  const docs = [];
+  snap.forEach(d => docs.push({ id: d.id, ...d.data() }));
+  docs.sort((a, b) => b.id.localeCompare(a.id)); // id 帶 timestamp，新的在前
+  reportSelect.innerHTML = "";
+  if (docs.length === 0) {
+    reportSelect.innerHTML = `<option value="">（尚無日報）</option>`;
+    return;
+  }
+  docs.forEach(d => {
+    const opt = document.createElement("option");
+    opt.value = d.id;
+    opt.textContent = `${d.dateLabel}（${d.items?.length || 0} 條）`;
+    reportSelect.appendChild(opt);
+  });
+  if (selectId) reportSelect.value = selectId;
+  else if (docs[0]) selectReport(docs[0]);
+}
+
+function selectReport(data) {
+  currentReport = { id: data.id, dateLabel: data.dateLabel, keywords: data.keywords || "", totalFetched: data.totalFetched, items: data.items || [] };
+  activeIndex = -1;
+  renderReport();
+  setStatus(`已載入日報（${data.dateLabel}）`);
+}
+
+reportSelect.addEventListener("change", async () => {
+  if (!reportSelect.value) return;
+  const snap = await getDocs(collection(db, COL));
+  snap.forEach(d => { if (d.id === reportSelect.value) selectReport({ id: d.id, ...d.data() }); });
+});
+
+document.getElementById("deleteReportBtn").addEventListener("click", async () => {
+  if (!reportSelect.value) return;
+  await deleteDoc(doc(db, COL, reportSelect.value));
+  currentReport = null;
+  reportEl.classList.remove("visible");
+  await loadReportList();
+  setStatus("已刪除該份日報");
+});
+
+// --- 還原設定 ---
+if (GEMINI_API_KEY) document.getElementById("geminiKey").value = GEMINI_API_KEY;
+document.getElementById("customFeeds").value = localStorage.getItem("radar_feeds") || "";
+document.getElementById("keywords").value = localStorage.getItem("radar_keywords") || "";
+loadReportList();
+</script>
+</body>
+</html>
