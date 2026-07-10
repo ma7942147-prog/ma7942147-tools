@@ -1,0 +1,386 @@
+<!-- 輪播圖產生器 · Carousel Maker
+     用資料產生教學輪播卡（Threads / IG 直式 1080×1350）。
+     編輯下方 JSON → 更新預覽 → 下載 PNG。無需安裝任何東西，雙擊即可用。 -->
+<title>輪播圖產生器 · Carousel Maker</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+<!-- ============ 卡片樣式（會被打包進匯出的 PNG，請勿加入頁面 chrome 樣式） ============ -->
+<style id="cardcss">
+  .card{
+    --s:1;
+    --cream:#F4EFE3;
+    --cream-2:#FBF8F1;
+    --ink:#1D1A15;
+    --muted:#6E675B;
+    --line:rgba(29,26,21,.10);
+    --red:#D23F2C;
+    --dark:#201C17;
+    --dark-hl:#F4796A;
+    --blue:#2E6FB7; --orange:#C67A1B; --green:#3E8E5A;
+    width:1080px; height:1350px;
+    transform:scale(var(--s)); transform-origin:top left;
+    background:var(--cream);
+    color:var(--ink);
+    box-sizing:border-box;
+    display:flex; flex-direction:column;
+    font-family:"PingFang TC","Heiti TC","Noto Sans TC","Microsoft JhengHei",-apple-system,system-ui,sans-serif;
+    font-feature-settings:"palt" 1;
+    overflow:hidden;
+  }
+  .card *{box-sizing:border-box; margin:0;}
+  .card__body{flex:1; display:flex; flex-direction:column; gap:44px; padding:78px 76px 40px;}
+
+  .hd{display:flex; flex-direction:column; gap:22px;}
+  .pill{
+    align-self:flex-start; background:var(--dark); color:var(--cream);
+    font-size:26px; font-weight:700; letter-spacing:.04em;
+    padding:12px 26px; border-radius:999px;
+  }
+  .eyebrow{
+    font-family:ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace;
+    font-size:24px; font-weight:600; letter-spacing:.22em; text-transform:uppercase;
+    color:var(--muted);
+  }
+  .eyebrow b{color:var(--red); font-weight:700;}
+  .title{font-size:78px; line-height:1.14; font-weight:800; letter-spacing:-.01em; text-wrap:balance;}
+  .subtitle{font-size:56px; line-height:1.18; font-weight:800; color:var(--red); text-wrap:balance;}
+
+  .blocks{display:flex; flex-direction:column; gap:30px;}
+  .hl{color:var(--red); font-weight:800;}
+
+  .b-lead{font-size:37px; line-height:1.58; color:#332F27; font-weight:500;}
+
+  .b-dark{background:var(--dark); color:var(--cream); border-radius:28px; padding:44px 46px; display:flex; flex-direction:column; gap:20px;}
+  .b-dark__text{font-size:40px; line-height:1.42; font-weight:700;}
+  .b-dark__text .hl{color:var(--dark-hl);}
+  .b-dark__note{font-size:29px; line-height:1.5; color:#B7AF9F; font-weight:500;}
+
+  .b-list{display:flex; flex-direction:column; gap:22px; list-style:none; padding:0;}
+  .row{
+    --tone:var(--ink);
+    display:grid; grid-template-columns:230px 1fr; align-items:center; gap:30px;
+    background:var(--cream-2); border:1px solid var(--line); border-radius:22px;
+    padding:34px 40px;
+  }
+  .row--blue{--tone:var(--blue);} .row--red{--tone:var(--red);}
+  .row--orange{--tone:var(--orange);} .row--green{--tone:var(--green);}
+  .row__label{font-size:36px; font-weight:800; color:var(--tone); letter-spacing:.01em; position:relative; padding-left:26px;}
+  .row__label::before{content:""; position:absolute; left:0; top:.18em; bottom:.18em; width:8px; border-radius:99px; background:var(--tone);}
+  .row__text{font-size:32px; line-height:1.4; color:#3A362D; font-weight:500;}
+
+  .b-compare{display:grid; grid-template-columns:1fr 1fr; gap:26px;}
+  .col{
+    --tone:var(--muted);
+    background:var(--cream-2); border:1px solid var(--line); border-top:6px solid var(--tone);
+    border-radius:22px; padding:34px 36px; display:flex; flex-direction:column; gap:16px;
+  }
+  .col--red{--tone:var(--red);} .col--blue{--tone:var(--blue);}
+  .col__tag{align-self:flex-start; font-size:24px; font-weight:700; color:var(--tone); background:color-mix(in srgb, var(--tone) 14%, transparent); padding:8px 18px; border-radius:999px;}
+  .col__title{font-size:40px; font-weight:800;}
+  .col__text{font-size:29px; line-height:1.46; color:#3A362D; font-weight:500;}
+
+  .b-take{display:flex; gap:20px; align-items:flex-start; background:color-mix(in srgb, var(--red) 9%, var(--cream)); border-left:8px solid var(--red); border-radius:16px; padding:34px 40px;}
+  .b-take__arrow{color:var(--red); font-size:40px; font-weight:800; line-height:1.2;}
+  .b-take p{font-size:36px; line-height:1.44; font-weight:800; color:#2A211C;}
+
+  .ft{display:flex; align-items:center; justify-content:space-between; gap:24px; background:var(--dark); color:var(--cream); padding:34px 76px; min-height:104px;}
+  .ft__note{font-size:28px; font-weight:600; color:#E9E2D3;}
+  .ft__page{font-size:28px; font-weight:700; letter-spacing:.08em; color:#C9C0AE; white-space:nowrap;}
+  .ft__page b{color:var(--cream);}
+</style>
+
+<!-- ============ 頁面 chrome（不會進入匯出） ============ -->
+<style>
+  :root{
+    --bg:#EDE7DB; --panel:#FBF8F1; --fg:#211E18; --sub:#6E675B;
+    --edge:rgba(0,0,0,.12); --accent:#C4402C; --accent-fg:#fff;
+  }
+  @media (prefers-color-scheme:dark){
+    :root{ --bg:#161310; --panel:#211D18; --fg:#F2EDE2; --sub:#A69D8C; --edge:rgba(255,255,255,.12); --accent:#E56B54; }
+  }
+  :root[data-theme="light"]{ --bg:#EDE7DB; --panel:#FBF8F1; --fg:#211E18; --sub:#6E675B; --edge:rgba(0,0,0,.12); --accent:#C4402C; }
+  :root[data-theme="dark"]{ --bg:#161310; --panel:#211D18; --fg:#F2EDE2; --sub:#A69D8C; --edge:rgba(255,255,255,.12); --accent:#E56B54; }
+
+  *{box-sizing:border-box;}
+  body{margin:0; background:var(--bg); color:var(--fg);
+    font-family:"PingFang TC","Noto Sans TC","Microsoft JhengHei",-apple-system,system-ui,sans-serif;
+    -webkit-font-smoothing:antialiased;}
+  .wrap{max-width:1160px; margin:0 auto; padding:38px 22px 90px;}
+  header.top{display:flex; flex-direction:column; gap:8px; margin-bottom:22px;}
+  header.top h1{font-size:clamp(24px,4vw,34px); font-weight:800; letter-spacing:-.01em; margin:0;}
+  header.top p{color:var(--sub); font-size:16px; line-height:1.55; max-width:60ch; margin:0;}
+
+  .bar{position:sticky; top:0; z-index:5; display:flex; flex-wrap:wrap; gap:10px; align-items:center;
+    padding:12px 0 14px; margin-bottom:18px; background:linear-gradient(var(--bg) 78%, transparent);}
+  button{font:inherit; cursor:pointer; border-radius:12px; border:1px solid var(--edge);
+    background:var(--panel); color:var(--fg); padding:11px 18px; font-weight:600; font-size:15px;
+    transition:transform .08s ease, filter .15s ease;}
+  button:hover{filter:brightness(1.04);}
+  button:active{transform:translateY(1px);}
+  button.primary{background:var(--accent); color:var(--accent-fg); border-color:transparent;}
+  button:focus-visible{outline:3px solid var(--accent); outline-offset:2px;}
+  .hint{color:var(--sub); font-size:13.5px; margin-left:auto;}
+
+  details.editor{background:var(--panel); border:1px solid var(--edge); border-radius:16px; margin-bottom:26px; overflow:hidden;}
+  details.editor > summary{list-style:none; cursor:pointer; padding:15px 20px; font-weight:700; display:flex; align-items:center; gap:10px;}
+  details.editor > summary::-webkit-details-marker{display:none;}
+  details.editor > summary::before{content:"▸"; color:var(--sub); transition:transform .15s;}
+  details.editor[open] > summary::before{transform:rotate(90deg);}
+  .editor__inner{padding:0 20px 20px; display:flex; flex-direction:column; gap:12px;}
+  textarea{width:100%; min-height:300px; resize:vertical; border-radius:12px; border:1px solid var(--edge);
+    background:var(--bg); color:var(--fg); padding:16px; font-family:ui-monospace,Menlo,Consolas,monospace;
+    font-size:13px; line-height:1.55;}
+  .err{color:#C4402C; font-size:14px; font-weight:600; min-height:1.2em;}
+  .editor__row{display:flex; gap:10px; flex-wrap:wrap; align-items:center;}
+
+  .board{display:grid; grid-template-columns:repeat(auto-fill, minmax(300px,1fr)); gap:34px;}
+  .cardwrap{display:flex; flex-direction:column; gap:12px;}
+  .frame{position:relative; width:100%; aspect-ratio:1080/1350; border-radius:20px; overflow:hidden;
+    box-shadow:0 18px 44px rgba(0,0,0,.20), 0 2px 6px rgba(0,0,0,.10); background:#F4EFE3;}
+  .cardwrap__foot{display:flex; align-items:center; justify-content:space-between; gap:10px;}
+  .cardwrap__foot span{color:var(--sub); font-size:14px; font-weight:600;}
+  .dl{padding:8px 14px; font-size:14px;}
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <h1>輪播圖產生器 · Carousel Maker</h1>
+    <p>教學型輪播卡（Threads / IG 直式，1080×1350）。改下面的文字 → 按「更新預覽」→ 每張卡右下角「下載 PNG」，或上面「下載全部」。這就是你看到的那種每日輪播圖的做法。</p>
+  </header>
+
+  <div class="bar">
+    <button class="primary" id="dlAll">⬇ 下載全部 PNG</button>
+    <button id="themeBtn">◑ 切換主題</button>
+    <span class="hint">字體用系統的中文黑體，匯出即所見。</span>
+  </div>
+
+  <details class="editor">
+    <summary>✏️ 編輯內容（JSON）</summary>
+    <div class="editor__inner">
+      <div class="editor__row">
+        <button class="primary" id="apply">更新預覽</button>
+        <button id="reset">還原範例</button>
+        <span class="err" id="err"></span>
+      </div>
+      <textarea id="json" spellcheck="false"></textarea>
+    </div>
+  </details>
+
+  <div class="board" id="board"></div>
+</div>
+
+<script>
+/* ====== 預設內容：完整 5 張「小白開 AI · EP1」輪播 ====== */
+const DEFAULT_SLIDES = [
+  {
+    kind:"cover",
+    tag:"小白開 AI · EP1",
+    eyebrow:"Can it replace engineers?",
+    title:"到底什麼是 Claude Code？",
+    subtitle:"真的能取代工程師嗎？",
+    blocks:[
+      {type:"lead", text:"全網都在吹它，但沒人講人話。\n一句話：它是**住在你電腦裡、聽得懂中文的工程師**。"},
+      {type:"list", items:[
+        {label:"不用寫程式", tone:"blue",   text:"你用中文交代任務，程式碼它自己寫"},
+        {label:"不只是聊天", tone:"red",    text:"它會真的動手：建網站、做工具、整理檔案"},
+        {label:"我親測",     tone:"orange", text:"我沒學過程式，用它做出一個每天更新的新聞網站"}
+      ]}
+    ],
+    footer:{ note:"最後一頁：工程師到底會不會失業", brand:"HK AI DAILY", page:"01/05" }
+  },
+  {
+    eyebrow:"01 · What is it",
+    title:"用一個比喻講完",
+    blocks:[
+      {type:"dark",
+        text:"Claude Code ＝ 一位**住進你電腦的工程師**。你用嘴巴交代，他自己寫、自己測、自己交件。",
+        note:"以前：想做網站 → 找外包 → 來回改三週。　現在：一句話 → 十分鐘搞初稿。"},
+      {type:"compare",
+        left:{ tag:"以前的 AI", tone:"muted", title:"只出一張嘴", text:"問它怎麼做網站，它給你一篇教學文。然後呢？還是要自己動手。"},
+        right:{ tag:"Claude Code", tone:"red", title:"直接動手", text:"「幫我做一個活動報名網站」——它出方案、寫程式、跑起來給你看。"}},
+      {type:"take", text:"帶走句：差別不是「更聰明」，是它終於有了一雙手。"}
+    ],
+    footer:{ brand:"HK AI DAILY", page:"02/05" }
+  },
+  {
+    eyebrow:"02 · How it works",
+    title:"它是怎麼動手的？",
+    blocks:[
+      {type:"list", items:[
+        {label:"你說", tone:"blue",   text:"用中文講一句「幫我做⋯」，像交代同事一樣自然"},
+        {label:"它做", tone:"red",    text:"讀懂需求 → 拆步驟 → 寫程式 → 自己執行、自己修錯"},
+        {label:"你看", tone:"orange", text:"幾分鐘後給你能跑的成品，不滿意就再補一句"}
+      ]},
+      {type:"dark",
+        text:"重點不是你要會什麼，是你**敢不敢開口交代**。",
+        note:"它把「工程」變成「對話」。"}
+    ],
+    footer:{ brand:"HK AI DAILY", page:"03/05" }
+  },
+  {
+    eyebrow:"03 · What I built",
+    title:"沒學過程式，我做出了這些",
+    blocks:[
+      {type:"list", items:[
+        {label:"新聞網站",   tone:"blue",   text:"每天自動抓、自動更新，我完全不用碰"},
+        {label:"輪播圖",     tone:"red",    text:"你現在看的這張，就是它幫我排版產生的"},
+        {label:"雜事自動化", tone:"orange", text:"檔案整理、通知提醒，全交給它顧"}
+      ]},
+      {type:"take", text:"帶走句：它取代的不是工程師，是「有想法但不敢動手的你」。"}
+    ],
+    footer:{ brand:"HK AI DAILY", page:"04/05" }
+  },
+  {
+    eyebrow:"04 · The answer",
+    title:"工程師到底會不會失業？",
+    blocks:[
+      {type:"dark",
+        text:"不會。真正的工程師，會變成**指揮 AI 的人**。",
+        note:"消失的是「只會照抄的那雙手」，留下的是「知道要做什麼的那顆腦」。"},
+      {type:"lead", text:"而你不用是工程師，也能開始——**今天就是你的第一天**。"},
+      {type:"take", text:"留言「第一天」，我把新手指南私訊你。"}
+    ],
+    footer:{ brand:"HK AI DAILY", page:"05/05" }
+  }
+];
+
+/* ====== 小工具 ====== */
+const $ = s => document.querySelector(s);
+function esc(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+function inline(s){ return esc(s).replace(/\*\*(.+?)\*\*/g,'<span class="hl">$1</span>').replace(/\n/g,"<br/>"); }
+function eyebrow(s){ return esc(s).replace(/·/g,"<b>·</b>"); }
+
+/* ====== 區塊渲染 ====== */
+function renderBlock(b){
+  switch(b.type){
+    case "lead":
+      return `<p class="b-lead">${inline(b.text)}</p>`;
+    case "dark":
+      return `<div class="b-dark"><p class="b-dark__text">${inline(b.text)}</p>`+
+             (b.note?`<p class="b-dark__note">${inline(b.note)}</p>`:"")+`</div>`;
+    case "list":
+      return `<ul class="b-list">`+ b.items.map(it=>
+        `<li class="row row--${it.tone||''}"><span class="row__label">${esc(it.label)}</span>`+
+        `<span class="row__text">${inline(it.text)}</span></li>`).join("") +`</ul>`;
+    case "compare":
+      const col = c => `<div class="col col--${c.tone||'muted'}">`+
+        (c.tag?`<span class="col__tag">${esc(c.tag)}</span>`:"")+
+        `<h3 class="col__title">${esc(c.title)}</h3>`+
+        `<p class="col__text">${inline(c.text)}</p></div>`;
+      return `<div class="b-compare">${col(b.left)}${col(b.right)}</div>`;
+    case "take":
+      return `<div class="b-take"><span class="b-take__arrow">→</span><p>${inline(b.text)}</p></div>`;
+    default: return "";
+  }
+}
+
+function buildCard(s){
+  const f = s.footer||{};
+  return `<div class="card ${s.kind||''}">`+
+    `<div class="card__body">`+
+      `<header class="hd">`+
+        (s.tag?`<span class="pill">${esc(s.tag)}</span>`:"")+
+        (s.eyebrow?`<div class="eyebrow">${eyebrow(s.eyebrow)}</div>`:"")+
+        `<h1 class="title">${esc(s.title||"")}</h1>`+
+        (s.subtitle?`<p class="subtitle">${esc(s.subtitle)}</p>`:"")+
+      `</header>`+
+      `<div class="blocks">${(s.blocks||[]).map(renderBlock).join("")}</div>`+
+    `</div>`+
+    `<footer class="ft"><span class="ft__note">${f.note?esc(f.note):""}</span>`+
+      `<span class="ft__page">${f.brand?esc(f.brand)+" · ":""}<b>${esc(f.page||"")}</b></span></footer>`+
+  `</div>`;
+}
+
+/* ====== 版面渲染 + 響應式縮放 ====== */
+const cardCSS = $("#cardcss").textContent;
+let SLIDES = DEFAULT_SLIDES;
+const ro = new ResizeObserver(entries=>{
+  for(const e of entries){
+    const card = e.target.querySelector(".card");
+    if(card) card.style.setProperty("--s", (e.contentRect.width/1080).toString());
+  }
+});
+
+function render(){
+  const board = $("#board");
+  board.innerHTML = "";
+  SLIDES.forEach((s,i)=>{
+    const wrap = document.createElement("div");
+    wrap.className = "cardwrap";
+    wrap.innerHTML = `<div class="frame">${buildCard(s)}</div>`+
+      `<div class="cardwrap__foot"><span>第 ${i+1} 張</span>`+
+      `<button class="dl" data-i="${i}">下載 PNG</button></div>`;
+    board.appendChild(wrap);
+    const frame = wrap.querySelector(".frame");
+    frame.querySelector(".card").style.setProperty("--s",(frame.clientWidth/1080).toString());
+    ro.observe(frame);
+  });
+}
+
+/* ====== 匯出 PNG（純瀏覽器，不需外部程式庫） ====== */
+function slideToPNG(i){
+  return new Promise((resolve,reject)=>{
+    const html = buildCard(SLIDES[i]);
+    const svg =
+`<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1350">`+
+`<foreignObject x="0" y="0" width="1080" height="1350">`+
+`<div xmlns="http://www.w3.org/1999/xhtml"><style>${cardCSS}</style>${html}</div>`+
+`</foreignObject></svg>`;
+    const img = new Image();
+    img.onload = ()=>{
+      try{
+        const cv = document.createElement("canvas");
+        cv.width = 1080; cv.height = 1350;
+        const ctx = cv.getContext("2d");
+        ctx.fillStyle = "#F4EFE3"; ctx.fillRect(0,0,1080,1350);
+        ctx.drawImage(img,0,0);
+        cv.toBlob(b=> b?resolve(b):reject(new Error("toBlob 失敗")), "image/png");
+      }catch(err){ reject(err); }
+    };
+    img.onerror = ()=> reject(new Error("SVG 載入失敗"));
+    img.src = "data:image/svg+xml;charset=utf-8,"+encodeURIComponent(svg);
+  });
+}
+function download(blob,name){
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = name; a.click();
+  setTimeout(()=>URL.revokeObjectURL(url), 4000);
+}
+async function dlOne(i){
+  try{ download(await slideToPNG(i), `carousel-${String(i+1).padStart(2,"0")}.png`); }
+  catch(e){ alert("這個瀏覽器擋了自動匯出，請改用截圖。\n("+e.message+")"); }
+}
+async function dlAll(){
+  for(let i=0;i<SLIDES.length;i++){ await dlOne(i); await new Promise(r=>setTimeout(r,350)); }
+}
+
+/* ====== 事件 ====== */
+$("#board").addEventListener("click", e=>{
+  const b = e.target.closest("button[data-i]");
+  if(b) dlOne(+b.dataset.i);
+});
+$("#dlAll").addEventListener("click", dlAll);
+$("#apply").addEventListener("click", ()=>{
+  try{
+    const data = JSON.parse($("#json").value);
+    if(!Array.isArray(data)) throw new Error("最外層要是一個陣列 [ ... ]");
+    SLIDES = data; $("#err").textContent = ""; render();
+  }catch(e){ $("#err").textContent = "JSON 錯誤：" + e.message; }
+});
+$("#reset").addEventListener("click", ()=>{
+  SLIDES = DEFAULT_SLIDES;
+  $("#json").value = JSON.stringify(SLIDES,null,2);
+  $("#err").textContent = ""; render();
+});
+$("#themeBtn").addEventListener("click", ()=>{
+  const cur = document.documentElement.getAttribute("data-theme");
+  const next = cur==="dark" ? "light" : cur==="light" ? "dark"
+    : (matchMedia("(prefers-color-scheme:dark)").matches ? "light" : "dark");
+  document.documentElement.setAttribute("data-theme", next);
+});
+
+/* ====== 啟動 ====== */
+$("#json").value = JSON.stringify(DEFAULT_SLIDES,null,2);
+render();
+</script>
