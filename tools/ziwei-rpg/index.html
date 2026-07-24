@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>紫微斗數 RPG 轉生系統</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, "Segoe UI", "PingFang TC", "Microsoft JhengHei", sans-serif;
+    background: #121212;
+    color: #eee;
+    padding: 24px;
+  }
+  h1 { text-align: center; margin-bottom: 4px; }
+  .subtitle { text-align: center; color: #999; margin-bottom: 24px; font-size: 14px; }
+  .container { max-width: 760px; margin: 0 auto; }
+  fieldset {
+    background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 10px;
+    padding: 14px 16px; margin-bottom: 16px;
+  }
+  legend { padding: 0 8px; font-weight: 600; color: #f59e0b; }
+  .hint { color: #888; font-size: 12px; margin: 0 0 10px; }
+  label.field-label { display: block; font-size: 12px; color: #999; margin: 8px 0 4px; }
+  select, input[type=text] {
+    font-family: inherit; font-size: 14px;
+    background: #1e1e1e; color: #eee; border: 1px solid #333;
+    border-radius: 6px; padding: 8px 12px; width: 100%;
+  }
+  .row { display: flex; gap: 12px; flex-wrap: wrap; }
+  .row > div { flex: 1; min-width: 220px; }
+  .check-row { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
+  .check-row input { width: auto; }
+  .check-row label { color: #ccc; font-size: 13px; }
+  .star-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+    gap: 8px; margin-top: 8px;
+  }
+  .star-item {
+    display: flex; align-items: center; gap: 6px;
+    background: #1e1e1e; border: 1px solid #2a2a2a; border-radius: 6px;
+    padding: 6px 8px; font-size: 13px;
+  }
+  .star-item input { width: auto; flex-shrink: 0; }
+  .tag {
+    display: inline-block; font-size: 10px; font-weight: 700; border-radius: 4px;
+    padding: 1px 5px; margin-left: auto; flex-shrink: 0;
+  }
+  .tag-C { background: #3a3a3a; color: #aaa; }
+  .tag-R { background: #1e3a5f; color: #7fb8ff; }
+  .tag-SR { background: #3b1e5f; color: #d19fff; }
+  .tag-SSR {
+    background: linear-gradient(135deg, #f59e0b, #ec4899, #a855f7);
+    color: #111; box-shadow: 0 0 8px rgba(245,158,11,.6);
+  }
+  button {
+    cursor: pointer; background: #d97706; color: #111; border: none; font-weight: 600;
+    font-family: inherit; font-size: 15px; border-radius: 8px; padding: 12px 20px;
+    width: 100%;
+  }
+  button:hover { background: #f59e0b; }
+  button.secondary {
+    background: #2a2a2a; color: #eee; width: auto; padding: 8px 16px; font-size: 13px;
+  }
+  button.secondary:hover { background: #3a3a3a; }
+  #result { display: none; margin-top: 20px; }
+  .card {
+    background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 12px;
+    padding: 20px; margin-bottom: 16px;
+  }
+  .card h2 { margin: 0 0 4px; }
+  .overall-badge {
+    display: inline-block; font-weight: 700; font-size: 13px; border-radius: 6px;
+    padding: 3px 10px; margin-left: 8px; vertical-align: middle;
+  }
+  .card-sub { color: #999; font-size: 13px; margin-bottom: 14px; }
+  .stat-block { margin-bottom: 14px; }
+  .stat-block h3 { margin: 0 0 6px; font-size: 15px; color: #f59e0b; }
+  .stat-block p { margin: 0; color: #ddd; font-size: 14px; line-height: 1.6; }
+  .skill-list { list-style: none; padding: 0; margin: 0; }
+  .skill-list li {
+    background: #1e1e1e; border: 1px solid #2a2a2a; border-radius: 8px;
+    padding: 10px 12px; margin-bottom: 8px;
+  }
+  .skill-head { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+  .skill-name { font-weight: 600; font-size: 14px; }
+  .skill-slot { font-size: 11px; color: #888; }
+  .skill-desc { font-size: 13px; color: #bbb; line-height: 1.5; }
+  .leftover-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+  .leftover-tags span {
+    font-size: 12px; background: #1e1e1e; border: 1px solid #2a2a2a;
+    border-radius: 6px; padding: 4px 8px;
+  }
+  #copyBtn { margin-top: 4px; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>⭐ 紫微斗數 RPG 轉生系統</h1>
+  <div class="subtitle">將命盤數據 100% 轉化為奇幻世界角色面板</div>
+
+  <fieldset>
+    <legend>基本命盤</legend>
+    <label class="field-label">角色名稱（選填）</label>
+    <input type="text" id="charName" placeholder="幫這位轉生者取個名字..." />
+
+    <div class="row">
+      <div>
+        <label class="field-label">命宮主星</label>
+        <select id="mingStar"></select>
+        <div class="check-row">
+          <input type="checkbox" id="soloSitting" />
+          <label for="soloSitting">命宮主星獨坐（無其他主星同宮）</label>
+        </div>
+      </div>
+      <div>
+        <label class="field-label">身宮主星</label>
+        <select id="shenStar"></select>
+      </div>
+    </div>
+  </fieldset>
+
+  <fieldset>
+    <legend>R 級・輔星與吉曜</legend>
+    <p class="hint">著名輔星吉曜（魁鉞、左輔右弼、文昌文曲、祿存）— 約占人群 35%</p>
+    <div class="star-grid" id="rGrid"></div>
+  </fieldset>
+
+  <fieldset>
+    <legend>C 級・雜曜與流年小星</legend>
+    <p class="hint">乙級星、雜曜、流年小星 — 約占人群 40%</p>
+    <div class="star-grid" id="cGrid"></div>
+  </fieldset>
+
+  <fieldset>
+    <legend>SR 級・重要煞星與化星</legend>
+    <p class="hint">單一化星（祿權科忌）、重要煞星（火鈴羊陀）— 約占人群 20%</p>
+    <div class="star-grid" id="srGrid"></div>
+  </fieldset>
+
+  <fieldset>
+    <legend>SSR 級・稀世格局判定</legend>
+    <p class="hint">極端稀世格局，約占人群 5%。部分格局會由上方勾選自動判定，以下為需額外確認的格局：</p>
+    <div class="check-row">
+      <input type="checkbox" id="jiYangSame" />
+      <label for="jiYangSame">上方勾選的「化忌」與「擎羊」實際同宮（觸發「忌羊絕殺」突變格局）</label>
+    </div>
+    <div class="check-row">
+      <input type="checkbox" id="doubleJi" />
+      <label for="doubleJi">雙化忌交會（本命化忌與大限/流年化忌同時衝會命宮，觸發「雙忌逆命」反格）</label>
+    </div>
+  </fieldset>
+
+  <button id="genBtn">⚡ 開始轉生</button>
+
+  <div id="result">
+    <div class="card" id="identityCard"></div>
+    <div class="card" id="bloodlineCard"></div>
+    <div class="card" id="skillCard"></div>
+    <div class="card" id="leftoverCard"></div>
+    <button class="secondary" id="copyBtn">📋 複製角色卡文字</button>
+  </div>
+</div>
+
+<script>
+// ---------- 資料庫：十四主星 + 空宮 ----------
+const MAIN_STARS = {
+  ziwei:   { name:"紫微", race:"天樞龍裔", cls:"皇族統帥者",
+    appearance:"周身環繞淡金色威壓氣場，氣質天生凌駕眾人，眼神自帶王者威嚴。",
+    classFlavor:"生來便懂得如何統御他人，一聲令下便有無數人願為之效命。",
+    bodyFlavor:"骨子裡藏著不容忽視的帝王氣度，即使沉默也自成焦點。" },
+  tianji:  { name:"天機", race:"流風賢裔", cls:"軍師智者",
+    appearance:"身形清瘦飄逸，行動間帶著風一般的靈動感，眼神銳利善於算計。",
+    classFlavor:"腦中隨時運轉著千百種盤算，總能在混亂局勢中找到破局之法。",
+    bodyFlavor:"善於隨機應變，遇事總能想出意料之外的巧妙對策。" },
+  taiyang: { name:"太陽", race:"光耀天裔", cls:"聖光騎士",
+    appearance:"渾身散發溫暖耀眼的光芒，站在人群中彷彿自帶舞台聚光燈。",
+    classFlavor:"以無私奉獻為信念，戰場上總是衝在最前方守護同伴。",
+    bodyFlavor:"即使身處逆境，也總能散發出鼓舞人心的光與熱。" },
+  wuqu:    { name:"武曲", race:"鋼鐵武裔", cls:"武裝財官",
+    appearance:"體格剛毅結實，舉手投足間透著金屬般的堅硬質感與紀律感。",
+    classFlavor:"既是驍勇善戰的戰士，也是精打細算的資源管理者，剛柔並濟。",
+    bodyFlavor:"行事果決乾脆，對自己與他人都有著近乎嚴苛的高標準。" },
+  tiantong:{ name:"天同", race:"福靈精怪", cls:"治癒祝禱師",
+    appearance:"面容溫和圓潤，周身縈繞柔和的淡藍色光暈，讓人不自覺放鬆戒心。",
+    classFlavor:"天生的療癒體質，總能在隊伍最疲憊的時刻適時送上慰藉。",
+    bodyFlavor:"性情溫和知足，即使身處艱難也能自得其樂。" },
+  lianzhen:{ name:"廉貞", race:"業火魔裔", cls:"暗黑劍舞者",
+    appearance:"眼底藏著一絲危險的暗紅光芒，優雅與狠戾在同一張臉上並存。",
+    classFlavor:"游走於秩序與混沌的邊界，戰鬥風格華麗卻暗藏殺機。",
+    bodyFlavor:"內心糾結著理智與慾望的拉扯，情緒起伏比常人劇烈。" },
+  tianfu:  { name:"天府", race:"磐石巨裔", cls:"寶藏守護者",
+    appearance:"體格厚重穩健，如同活著的堡壘，令人一見便心生安全感。",
+    classFlavor:"擅長守成與積累，是隊伍中最值得信賴的後盾與保管者。",
+    bodyFlavor:"性格沉穩保守，做任何決定前都會先確保萬無一失。" },
+  taiyin:  { name:"太陰", race:"月華精靈", cls:"星辰占卜師",
+    appearance:"肌膚透著月光般清冷的光澤，氣質陰柔內斂、深不可測。",
+    classFlavor:"擅長夜間行動與占卜預知，總能看穿他人未曾察覺的細節。",
+    bodyFlavor:"情感細膩豐富，習慣把真正的心思藏在平靜的表象之下。" },
+  tanlang: { name:"貪狼", race:"魅影狐裔", cls:"魅惑遊俠",
+    appearance:"眼神流轉間帶著難以抗拒的魅惑，舉止靈活又充滿野性魅力。",
+    classFlavor:"多才多藝、慾望旺盛，無論交際或戰鬥都懂得投機取巧。",
+    bodyFlavor:"對新鮮事物永遠充滿好奇，難以長時間安於單調的生活。" },
+  jumen:   { name:"巨門", race:"暗夜妖裔", cls:"密語辯士",
+    appearance:"聲線低沉富有磁性，眼神銳利彷彿能看穿一切謊言與陰謀。",
+    classFlavor:"口才與洞察力驚人，最擅長在暗處挖出真相或散布疑雲。",
+    bodyFlavor:"疑心較重，習慣把事情反覆推敲到最壞的可能性。" },
+  tianxiang:{ name:"天相", race:"貴族人裔", cls:"宮廷宰相",
+    appearance:"儀態端正得體，穿著再樸素也難掩與生俱來的貴氣。",
+    classFlavor:"是天生的協調者與輔佐者，總能在各方勢力間取得平衡。",
+    bodyFlavor:"重視公平與體面，做事講求分寸、不喜逾矩。" },
+  tianliang:{ name:"天梁", race:"長老龍裔", cls:"庇護賢者",
+    appearance:"氣質沉穩老練，即使年輕也帶著一種歷經風霜的長者氣場。",
+    classFlavor:"樂於指引與庇護他人，總在危難時挺身而出承擔責任。",
+    bodyFlavor:"責任感極重，習慣把他人的難題也扛在自己肩上。" },
+  qisha:   { name:"七殺", race:"戰狂獸裔", cls:"嗜血將軍",
+    appearance:"眼神銳利如刀，周身殺氣凜然，天生便是戰場上的存在。",
+    classFlavor:"作戰風格剛猛果決，一旦出手便勢如破竹、絕不留情。",
+    bodyFlavor:"性格剛烈獨立，寧可孤軍奮戰也不願受人牽制。" },
+  pojun:   { name:"破軍", race:"混沌魔裔", cls:"破滅先鋒",
+    appearance:"氣息帶著破壞與重生交織的躁動感，眼神中透著不安於現狀的野性。",
+    classFlavor:"擅長打破舊有格局、開創新局，破壞的同時也在重建。",
+    bodyFlavor:"厭惡一成不變，總是主動尋求變動與挑戰。" },
+  empty:   { name:"空宮（借星）", race:"虛無行者", cls:"無相影武者",
+    appearance:"外形飄忽不定形，彷彿隨著周遭氣息變幻，難以被一眼看穿本質。",
+    classFlavor:"沒有固定的戰鬥風格，反而能借力使力、隨勢而變，難以捉摸。",
+    bodyFlavor:"自我認同感較為模糊，容易被身邊的人事物深深影響。" },
+};
+
+const MAIN_STAR_ORDER = ["ziwei","tianji","taiyang","wuqu","tiantong","lianzhen","tianfu","taiyin","tanlang","jumen","tianxiang","tianliang","qisha","pojun","empty"];
+
+// ---------- 資料庫：輔星 / 煞星 / 化星 / 雜曜 ----------
+const AUX_STARS = [
+  // R 級
+  { id:"tiankui", name:"天魁", rarity:"R", slot:"bloodline", title:"天魁貴人：陽面守護", desc:"命中註定在白日或明處遇貴人相助，關鍵時刻總有人伸出援手。" },
+  { id:"tianyue", name:"天鉞", rarity:"R", slot:"bloodline", title:"天鉞貴人：暗夜守護", desc:"暗處總有隱形守護者為你引路，危機中總能絕處逢生。" },
+  { id:"zuofu",   name:"左輔", rarity:"R", slot:"passive",   title:"左輔扈從：僚屬相助", desc:"身邊自然聚集忠誠夥伴，團隊作戰時能力大幅提升。" },
+  { id:"youbi",   name:"右弼", rarity:"R", slot:"passive",   title:"右弼扈從：暗中扶持", desc:"總在你察覺不到之處獲得援助，逆境中格外堅韌。" },
+  { id:"wenchang",name:"文昌", rarity:"R", slot:"active",    title:"文昌妙筆：知識顯現術", desc:"揮筆之間可召喚知識之力，瞬間解析古老符文與謎題。" },
+  { id:"wenqu",   name:"文曲", rarity:"R", slot:"active",    title:"文曲雅韻：巧言魅語術", desc:"言語如樂音般動人，能瞬間扭轉對話局勢、蠱惑人心。" },
+  { id:"lucun",   name:"祿存", rarity:"R", slot:"bloodline", title:"祿存血脈：天生福祿", desc:"血液中流淌著財富的祝福，資源與機運總是源源不絕。" },
+
+  // C 級
+  { id:"dahao",   name:"大耗", rarity:"C", slot:"passive",   title:"耗財之魂：揮金如土", desc:"財物總是留不住，卻也因此練就了輕裝上陣的灑脫。" },
+  { id:"longde",  name:"龍德", rarity:"C", slot:"passive",   title:"龍德庇佑：小難化解", desc:"遇到小麻煩總能莫名其妙地化險為夷。" },
+  { id:"xianchi", name:"咸池", rarity:"C", slot:"bloodline", title:"咸池微光：桃花血脈", desc:"與生俱來的一絲魅力，總能吸引旁人的目光。" },
+  { id:"posui",   name:"破碎", rarity:"C", slot:"passive",   title:"破碎印記：裝備易損", desc:"隨身物品總是特別容易耗損，但也磨練出隨機應變的本能。" },
+  { id:"tianguan",name:"天官", rarity:"C", slot:"bloodline", title:"天官賜福：小小威望", desc:"在群體中天生帶著一絲不易察覺的權威感。" },
+  { id:"tianfu2", name:"天福", rarity:"C", slot:"bloodline", title:"天福星光：小確幸體質", desc:"總能在平凡日常中察覺並享受微小的幸福。" },
+  { id:"taifu",   name:"台輔", rarity:"C", slot:"passive",   title:"台輔微光：職務加成", desc:"處理事務性工作時效率總是比別人高一些。" },
+  { id:"fenggao", name:"封誥", rarity:"C", slot:"passive",   title:"封誥微光：名譽加成", desc:"名聲總是傳得比實際貢獻更遠一些。" },
+  { id:"tianchu", name:"天廚", rarity:"C", slot:"active",    title:"天廚料理：野營烹飪術", desc:"隨手取材也能煮出令人驚豔的野營料理，為隊友恢復些許元氣。" },
+  { id:"santai",  name:"三台", rarity:"C", slot:"bloodline", title:"三台微光：領導雛形", desc:"隱約帶著初階領導者的氣場，容易被推舉為小隊代表。" },
+  { id:"bazuo",   name:"八座", rarity:"C", slot:"bloodline", title:"八座微光：輔佐雛形", desc:"天生適合擔任副手，總能精準補足隊伍的不足之處。" },
+
+  // SR 級
+  { id:"hualu",   name:"化祿", rarity:"SR", slot:"active",   title:"化祿爆發：資源湧泉術", desc:"引動命盤祿氣，短時間內召喚大量資源與機運湧現。" },
+  { id:"huaquan", name:"化權", rarity:"SR", slot:"active",   title:"化權爆發：號令天下", desc:"爆發強大氣勢，一聲令下周遭盟友戰力全面提升。" },
+  { id:"huake",   name:"化科", rarity:"SR", slot:"passive",  title:"化科護體：智慧光環", desc:"周身環繞智慧光環，思路清晰不受混亂與魅惑干擾。" },
+  { id:"huaji",   name:"化忌", rarity:"SR", slot:"passive",  title:"化忌纏身：詛咒反噬體質", desc:"命運烙印著揮之不去的厄運，但每次跌落谷底都淬煉出驚人韌性。" },
+  { id:"qingyang",name:"擎羊", rarity:"SR", slot:"active",   title:"羊刃斬：見血封喉", desc:"揮出必見血的一擊，代價是自身也將承受反噬之痛。" },
+  { id:"tuoluo",  name:"陀羅", rarity:"SR", slot:"active",   title:"陀螺殺陣：纏鬥領域", desc:"展開緩慢卻無從掙脫的纏鬥領域，困住敵人直至耗盡氣力。" },
+  { id:"huoxing", name:"火星", rarity:"SR", slot:"active",   title:"烈焰爆發：瞬燃術", desc:"瞬間引爆體內烈焰，造成爆發性的灼燒傷害。" },
+  { id:"lingxing",name:"鈴星", rarity:"SR", slot:"active",   title:"幽鈴殺機：暗影連擊", desc:"如鈴聲乍響般的連續暗殺攻擊，令敵人防不勝防。" },
+];
+
+const RARITY_WEIGHT = { C:1, R:2, SR:3, SSR:4 };
+const RARITY_LABEL = { C:"C 級", R:"R 級", SR:"SR 級", SSR:"SSR 極稀有" };
+
+const SLOT_LABEL = { bloodline:"血統天賦", passive:"職業技能・被動", active:"職業技能・主動" };
+
+// ---------- 建立下拉選單與星曜勾選格 ----------
+const mingSel = document.getElementById("mingStar");
+const shenSel = document.getElementById("shenStar");
+MAIN_STAR_ORDER.forEach(id => {
+  const star = MAIN_STARS[id];
+  [mingSel, shenSel].forEach(sel => {
+    const opt = document.createElement("option");
+    opt.value = id;
+    opt.textContent = star.name;
+    sel.appendChild(opt);
+  });
+});
+
+function buildStarGrid(containerId, rarity) {
+  const grid = document.getElementById(containerId);
+  AUX_STARS.filter(s => s.rarity === rarity).forEach(s => {
+    const item = document.createElement("label");
+    item.className = "star-item";
+    item.innerHTML = `<input type="checkbox" id="aux_${s.id}" /> ${s.name} <span class="tag tag-${s.rarity}">${s.rarity}</span>`;
+    grid.appendChild(item);
+  });
+}
+buildStarGrid("rGrid", "R");
+buildStarGrid("cGrid", "C");
+buildStarGrid("srGrid", "SR");
+
+// ---------- 轉生產生邏輯 ----------
+function pickTop(pool, slot, n) {
+  return pool.filter(x => x.slot === slot)
+             .sort((a,b) => RARITY_WEIGHT[b.rarity] - RARITY_WEIGHT[a.rarity])
+             .slice(0, n);
+}
+
+document.getElementById("genBtn").addEventListener("click", () => {
+  const mingId = mingSel.value;
+  const shenId = shenSel.value;
+  const ming = MAIN_STARS[mingId];
+  const shen = MAIN_STARS[shenId];
+  const soloSitting = document.getElementById("soloSitting").checked;
+  const jiYangSame = document.getElementById("jiYangSame").checked;
+  const doubleJi = document.getElementById("doubleJi").checked;
+  const name = document.getElementById("charName").value.trim() || "無名轉生者";
+
+  // 收集已勾選的輔星/煞星/化星/雜曜
+  let pool = AUX_STARS.filter(s => document.getElementById("aux_" + s.id).checked)
+                       .map(s => ({...s}));
+
+  const selectedIds = new Set(pool.map(s => s.id));
+
+  // ---- SSR / SR 特殊格局判定 ----
+  const ziweiSolo = mingId === "ziwei" && soloSitting;
+  const sanQi = selectedIds.has("hualu") && selectedIds.has("huaquan") && selectedIds.has("huake");
+  const jiYangMutation = selectedIds.has("huaji") && selectedIds.has("qingyang") && jiYangSame;
+
+  if (ziweiSolo) {
+    pool.push({ id:"ziweiSolo", name:"至尊孤帝", rarity:"SSR", slot:"bloodline",
+      title:"至尊孤帝：天命所歸", desc:"紫微獨坐命宮，君臨天下的孤高帝格，一生自帶主角光環，凡人萬中無一。" });
+  } else if (soloSitting) {
+    pool.push({ id:"solo", name:"孤高血統", rarity:"SR", slot:"bloodline",
+      title:"孤高血統：獨當一面", desc:"命宮僅有一顆主星獨坐，個性鮮明強烈，不容他人取代。" });
+  }
+
+  if (sanQi) {
+    pool.push({ id:"sanqi", name:"三奇嘉會", rarity:"SSR", slot:"bloodline",
+      title:"三奇嘉會：天選之子", desc:"化祿、化權、化科三奇齊會命宮，凡間罕見的天選命格，做事無往不利。" });
+  }
+  if (jiYangMutation) {
+    pool.push({ id:"jiyang", name:"忌羊絕殺", rarity:"SSR", slot:"active",
+      title:"忌羊絕殺：向死而生", desc:"化忌與擎羊同宮引動的極端突變格局，越是絕境爆發的力量越驚人。" });
+  }
+  if (doubleJi) {
+    pool.push({ id:"doubleji", name:"雙忌逆命", rarity:"SSR", slot:"active",
+      title:"雙忌逆命：破而後立", desc:"雙重化忌交會命盤，命運兩度將你推落深淵，卻也因此鍛造出逆天改命的意志。" });
+  }
+
+  // ---- 分配欄位 ----
+  const bloodlinePicks = pool.filter(x => x.slot === "bloodline")
+                              .sort((a,b) => RARITY_WEIGHT[b.rarity] - RARITY_WEIGHT[a.rarity]);
+  const passivePicks = pickTop(pool, "passive", 2);
+  const activePicks = pickTop(pool, "active", 2);
+
+  const usedIds = new Set([...bloodlinePicks, ...passivePicks, ...activePicks].map(x => x.id));
+
+  const FILLER_PASSIVE = { rarity:"C", title:"尚未覺醒", desc:"這個職業技能欄位尚未被命盤星曜點亮，靜待機緣覺醒。" };
+  const FILLER_ACTIVE = { rarity:"C", title:"尚未覺醒", desc:"這個職業技能欄位尚未被命盤星曜點亮，靜待機緣覺醒。" };
+  while (passivePicks.length < 2) passivePicks.push({...FILLER_PASSIVE});
+  while (activePicks.length < 2) activePicks.push({...FILLER_ACTIVE});
+  if (bloodlinePicks.length === 0) {
+    bloodlinePicks.push({ rarity:"C", title:"平凡血統", desc:"命宮清淡，尚無特殊天賦顯現，一切潛能仍靜待挖掘。" });
+  }
+
+  const leftover = pool.filter(x => !usedIds.has(x.id));
+
+  // ---- 整體稀有度 ----
+  const allRealItems = [...bloodlinePicks, ...passivePicks, ...activePicks, ...leftover]
+    .filter(x => x.title !== "尚未覺醒" && x.title !== "平凡血統");
+  let overall = "C";
+  allRealItems.forEach(x => { if (RARITY_WEIGHT[x.rarity] > RARITY_WEIGHT[overall]) overall = x.rarity; });
+
+  renderResult({ name, ming, shen, soloSitting, ziweiSolo, overall, bloodlinePicks, passivePicks, activePicks, leftover });
+});
+
+function tagHtml(rarity) {
+  return `<span class="tag tag-${rarity}" style="margin-left:8px;">${rarity}</span>`;
+}
+
+function renderResult({ name, ming, shen, ziweiSolo, overall, bloodlinePicks, passivePicks, activePicks, leftover }) {
+  const identityCard = document.getElementById("identityCard");
+  identityCard.innerHTML = `
+    <h2>${name}${tagHtml(overall)}</h2>
+    <div class="card-sub">命宮主星：${ming.name}　｜　身宮主星：${shen.name}</div>
+    <div class="stat-block">
+      <h3>🧬 轉生種族：${ming.race}${ziweiSolo ? "（覺醒態）" : ""}</h3>
+      <p>${ming.appearance}</p>
+    </div>
+    <div class="stat-block">
+      <h3>⚔️ 初始職業：${ming.cls}</h3>
+      <p>${ming.classFlavor}</p>
+    </div>
+    <div class="stat-block">
+      <h3>🌙 隱藏氣質（身宮・${shen.name}）</h3>
+      <p>${shen.bodyFlavor}</p>
+    </div>
+  `;
+
+  const bloodlineCard = document.getElementById("bloodlineCard");
+  bloodlineCard.innerHTML = `<h3 style="margin-top:0;color:#f59e0b;">🩸 血統天賦</h3><ul class="skill-list">` +
+    bloodlinePicks.map(x => `
+      <li>
+        <div class="skill-head">
+          <span class="skill-name">${x.title}</span>
+          <span class="tag tag-${x.rarity}">${x.rarity}</span>
+        </div>
+        <div class="skill-desc">${x.desc}</div>
+      </li>`).join("") + `</ul>`;
+
+  const skillCard = document.getElementById("skillCard");
+  skillCard.innerHTML = `<h3 style="margin-top:0;color:#f59e0b;">✨ 職業技能</h3><ul class="skill-list">` +
+    [...passivePicks.map(x => ({...x, slot:"被動"})), ...activePicks.map(x => ({...x, slot:"主動"}))]
+      .map(x => `
+      <li>
+        <div class="skill-head">
+          <span class="skill-name">${x.title}</span>
+          <span class="skill-slot">（${x.slot}）</span>
+          <span class="tag tag-${x.rarity}">${x.rarity}</span>
+        </div>
+        <div class="skill-desc">${x.desc}</div>
+      </li>`).join("") + `</ul>`;
+
+  const leftoverCard = document.getElementById("leftoverCard");
+  if (leftover.length) {
+    leftoverCard.innerHTML = `<h3 style="margin-top:0;color:#f59e0b;">💫 其他潛藏星曜氣息</h3><div class="leftover-tags">` +
+      leftover.map(x => `<span>${x.name || x.title}${tagHtml(x.rarity)}</span>`).join("") + `</div>`;
+    leftoverCard.style.display = "block";
+  } else {
+    leftoverCard.style.display = "none";
+  }
+
+  document.getElementById("result").style.display = "block";
+  document.getElementById("result").scrollIntoView({ behavior: "smooth" });
+}
+
+document.getElementById("copyBtn").addEventListener("click", () => {
+  const text = document.getElementById("result").innerText;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.getElementById("copyBtn");
+    const original = btn.textContent;
+    btn.textContent = "✅ 已複製！";
+    setTimeout(() => { btn.textContent = original; }, 1500);
+  });
+});
+</script>
+</body>
+</html>

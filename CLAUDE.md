@@ -19,6 +19,7 @@
 - **mv-creator**：MV 創作追蹤器（主題→歌詞→曲風→Suno→Grok 影片）
 - **edu-video-maker**：影音教學 Agent 工作室（腳本→語音→影片）
 - **telegram-notifier**：共用的 Telegram 通知基礎設施（`/functions` + `tools/shared/telegram-notify.js`），部署步驟見 `tools/telegram-notifier/README.md`；bot 是 @ma7942147_bot
+- **ziwei-rpg**：紫微斗數 RPG 角色轉生系統（命盤主星／輔星／煞星／化星／特殊格局 → 種族、職業、血統天賦、職業技能，稀有度 C/R/SR/SSR）
 
 ## 工作注意事項
 - 個人資料一律去識別化
