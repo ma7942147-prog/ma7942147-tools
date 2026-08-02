@@ -1,0 +1,13 @@
+# 教學檔案處理「核心工具包」— 只放核心，選用套件請勿加進來
+# 來源：三師爸 Sense Bar｜AI Agent 基本功 EP03
+
+python-docx                          # 生成／讀寫 Word
+openpyxl                             # 讀寫與格式化 Excel
+python-pptx                          # 生成／改寫 PowerPoint
+pypdf                                # PDF 合併、拆分、浮水印
+PyMuPDF                              # PDF 抽文字、抽頁、轉圖片
+reportlab                            # 生成 PDF 與浮水印圖層
+pillow                               # 圖片裁切、去白邊、合成
+matplotlib                           # 產生統計圖表
+qrcode[pil]                          # 產生 QR Code
+markitdown[pdf,docx,pptx,xlsx]       # PDF／Word／PPT／Excel 轉 Markdown

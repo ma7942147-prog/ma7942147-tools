@@ -14,3 +14,8 @@ credentials.*
 # Node.js
 node_modules/
 package-lock.json
+
+# Python（核心工具包的虛擬環境，每台電腦各自安裝）
+.venv/
+__pycache__/
+*.pyc
