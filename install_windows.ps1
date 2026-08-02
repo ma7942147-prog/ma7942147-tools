@@ -54,12 +54,11 @@ Write-Host "核心安裝完成回報："
 Write-Host "✅ uv：$uvStatus"
 Write-Host "✅ Python：$pyVersion"
 Write-Host "✅ 環境：$(Join-Path $PSScriptRoot '.venv')"
-if ($verifyExit -eq 0) {
-    Write-Host "✅ 核心套件：10/10 匯入成功"
-} else {
+if ($verifyExit -ne 0) {
     Write-Host "❌ 核心套件：有匯入失敗，請看上方清單"
 }
-Write-Host "💡 選用套件：未安裝（正確）"
+# 核心與選用套件的實際狀態由 verify_core.py 印出（上方），這裡不重複寫死，
+# 以免印出與實際環境不符的結論。
 Write-Host "下一步：請使用 .\.venv\Scripts\python.exe 執行本 repo 的 Python 程式"
 
 exit $verifyExit
