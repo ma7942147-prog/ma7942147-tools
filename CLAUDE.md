@@ -20,6 +20,21 @@
 - **edu-video-maker**：影音教學 Agent 工作室（腳本→語音→影片）
 - **telegram-notifier**：共用的 Telegram 通知基礎設施（`/functions` + `tools/shared/telegram-notify.js`），部署步驟見 `tools/telegram-notifier/README.md`；bot 是 @ma7942147_bot
 
+## 教學檔案處理「核心工具包」
+依《1.AGENT_SETUP_教學檔案處理工具包.md》。**在自己的 Windows 電腦上**、本 repo 根目錄跑：
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File ".\install_windows.ps1"
+```
+
+- 裝完用 `.\.venv\Scripts\python.exe` 執行本 repo 的 Python 程式（不要用全域 python）
+- 核心 10 個套件清單在 `requirements-core.txt`；驗證用 `verify_core.py`
+- **選用套件（pandas、pdfplumber、ocrmypdf、edge-tts…）預設不裝**，等真的要用到
+  那個任務再單獨裝進同一個 `.venv`
+- 系統工具（Tesseract、Poppler、ffmpeg）不是 pip 套件，預設不裝；裝完**必須重開終端機**
+- ⚠️ `.venv` 不會跟著 GitHub 或 GDrive 同步（已列入 `.gitignore`）。
+  **換一台電腦就要重跑一次上面那行**——雲端會話、WSL、沙盒都不能共用 Windows 的 `.venv`
+
 ## 外部工具連接紀錄
 （依《AGENT_SETUP 外部工具連接指南》第四步要求記錄；最後查證 2026-08-03）
 

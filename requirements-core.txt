@@ -1,0 +1,17 @@
+# 教學檔案處理「核心工具包」— 依《1.AGENT_SETUP_教學檔案處理工具包.md》
+# 只列核心必裝的 10 個套件。選用套件（pandas、pdfplumber、ocrmypdf…）
+# 一律不要加進這裡，等真的要用到那個任務時再單獨裝進同一個 .venv。
+
+python-docx                        # 生成／讀寫 Word
+openpyxl                           # 讀寫與格式化 Excel
+python-pptx                        # 生成／改寫 PowerPoint
+pypdf                              # PDF 合併、拆分、浮水印
+PyMuPDF                            # PDF 抽文字、抽頁、轉圖片
+reportlab                          # 生成 PDF 與浮水印圖層
+pillow                             # 圖片裁切、去白邊、合成
+matplotlib                         # 產生統計圖表
+qrcode[pil]                        # 產生 QR Code
+
+# 注意：只裝裸的 markitdown 不會啟用所有文件格式，
+# 必須帶這四組官方 extras 才讀得到 PDF／Word／PPT／Excel。
+markitdown[pdf,docx,pptx,xlsx]     # 各種教材轉成 Markdown
