@@ -26,6 +26,17 @@
 - Windows 本機待接：Obsidian MCP、Firebase CLI → 跑 `tools/agent-setup/setup_windows.ps1`
 - 詳細記錄（通道／鑰匙／日期／卡關排除）：`tools/agent-setup/連接記錄.md`
 
+## 教學檔案處理核心工具包
+Word／Excel／PPT／PDF／圖片／圖表／QR Code／轉 Markdown 的 10 個 Python 套件。
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File ".\install_windows.ps1"
+```
+
+裝進 repo 的 `.venv`（不污染系統 Python）。跑 Python 一律用 `.\.venv\Scripts\python.exe`。
+只裝核心 10 個；pandas、pdfplumber、ocrmypdf、yt-dlp 等選用套件和 Tesseract／Poppler／ffmpeg
+等系統工具**預設不裝**，明確要用時再單獨加。清單見 `requirements-core.txt`，驗證跑 `verify_core.py`。
+
 ## 全域設定
 完整規範在 `tools/agent-setup/全域設定/CLAUDE_global.md`（本機 Claude Code 會裝到 `~/.claude/CLAUDE.md`）。
 **雲端 Claude Code（claude.ai/code）讀不到 `~/.claude/`**，所以下面兩條最常用的抄一份在這裡：

@@ -1,0 +1,20 @@
+# 教學檔案處理「核心工具包」
+# 來源：4.20260721,Agent_一鍵安裝檔.docx（三師爸 Sense Bar EP03）
+#
+# 只放核心必裝的 10 個套件。選用套件（pandas、pdfplumber、ocrmypdf、yt-dlp…）
+# 和系統工具（Tesseract、Poppler、ffmpeg）一律不放這裡——使用者明確點名用途時再單獨裝。
+#
+# 安裝：powershell.exe -NoProfile -ExecutionPolicy Bypass -File ".\install_windows.ps1"
+
+python-docx                              # 生成／讀寫 Word
+openpyxl                                 # 讀寫與格式化 Excel
+python-pptx                              # 生成／改寫 PowerPoint
+pypdf                                    # PDF 合併、拆分、浮水印
+PyMuPDF                                  # PDF 抽文字、抽頁、轉圖片
+reportlab                                # 生成 PDF 與浮水印圖層
+pillow                                   # 圖片裁切、去白邊、合成
+matplotlib                               # 產生統計圖表
+qrcode[pil]                              # 產生 QR Code
+
+# 注意：只裝裸的 markitdown 不會啟用所有文件格式，一定要帶這四組官方 extras
+markitdown[pdf,docx,pptx,xlsx]           # PDF／Word／PPT／Excel 轉 Markdown
