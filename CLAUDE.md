@@ -35,6 +35,22 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File ".\install_windows.ps1"
 - ⚠️ `.venv` 不會跟著 GitHub 或 GDrive 同步（已列入 `.gitignore`）。
   **換一台電腦就要重跑一次上面那行**——雲端會話、WSL、沙盒都不能共用 Windows 的 `.venv`
 
+### 影音選用工具（yt-dlp / ffmpeg / edge-tts）
+核心包**不含**這些。要用時才跑 `install_optional_media.ps1`，會裝進同一個 `.venv`：
+
+```powershell
+# 只下載影片：yt-dlp + ffmpeg
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File ".\install_optional_media.ps1"
+# edu-video-maker 整條線：再加文字轉語音
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File ".\install_optional_media.ps1" -EdgeTts
+# 只抓 YouTube 既有字幕（不需要 ffmpeg）
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File ".\install_optional_media.ps1" -TranscriptOnly
+```
+
+- ⚠️ **ffmpeg 裝完必須關掉終端機重開**，否則 yt-dlp 合併影音那步會失敗
+  （YouTube 影像／聲音是分開兩軌，合併是 ffmpeg 做的）
+- 要先跑過 `install_windows.ps1`；這支只加裝，不會自己建 `.venv`
+
 ## 外部工具連接紀錄
 （依《AGENT_SETUP 外部工具連接指南》第四步要求記錄；最後查證 2026-08-03）
 
