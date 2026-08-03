@@ -20,6 +20,7 @@
 - **edu-video-maker**：影音教學 Agent 工作室（腳本→語音→影片）
 - **telegram-notifier**：共用的 Telegram 通知基礎設施（`/functions` + `tools/shared/telegram-notify.js`），部署步驟見 `tools/telegram-notifier/README.md`；bot 是 @ma7942147_bot
 - **agent-setup**：外部工具連接設定與記錄，見 `tools/agent-setup/連接記錄.md`
+- **wallpaper**：極簡可愛動物桌布產生器（Pillow 純程式畫，不抓網路圖），見 `tools/wallpaper/README.md`
 
 ## 已連接的外部服務
 - 雲端 Claude Code（OAuth 連接器，同帳號自動同步）：Google Drive、Gmail、Google Calendar、GitHub
