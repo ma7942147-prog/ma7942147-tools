@@ -26,7 +26,30 @@
 - Windows 本機待接：Obsidian MCP、Firebase CLI → 跑 `tools/agent-setup/setup_windows.ps1`
 - 詳細記錄（通道／鑰匙／日期／卡關排除）：`tools/agent-setup/連接記錄.md`
 
+## 全域設定
+完整規範在 `tools/agent-setup/全域設定/CLAUDE_global.md`（本機 Claude Code 會裝到 `~/.claude/CLAUDE.md`）。
+**雲端 Claude Code（claude.ai/code）讀不到 `~/.claude/`**，所以下面兩條最常用的抄一份在這裡：
+
+### 語音輸入的錯字還原
+使用者常用語音輸入，同音錯字要以上下文善意還原，不要照字面理解：
+
+| 語音轉出的字 | 實際意思 |
+|--------------|---------|
+| Call Desk / 摳德斯 | Codex |
+| Cloud Call / Cloud Code | Claude Code |
+| Typeless | headless |
+| antigrity / 安提 | Antigravity |
+| 切磨伊 | chezmoi |
+
+明顯錯字直接順過去；但關鍵詞（檔名、路徑、指令名）沒把握時，**先說出你的理解再往下做**。
+
+### 語音回覆
+使用者說「用語音回答」「唸出來」「唸給我聽」時才做語音，工具統一用 Edge-TTS：
+`.\.venv\Scripts\python.exe tools\agent-setup\全域設定\speak.py "內容"`
+預設聲音 `zh-TW-YunJheNeural`；講稿 100–250 字、數字用中文、只講結論與下一步。
+
 ## 工作注意事項
 - 個人資料一律去識別化
 - commit 訊息要寫清楚做了什麼 + 為什麼
 - 收工前說「收工」讓 Claude 同步三方
+- 開工：確認目錄 → 讀工作筆記 → `git status` → 檢查遠端新 commit（**提醒即可，不自動 pull**）
