@@ -11,6 +11,7 @@
 | `antigravity_system_prompt.md` | Google Antigravity | **人工複製貼上**到 System Prompt |
 | `speak.py` | 兩者共用 | Edge-TTS 語音合成 + 行內播放 |
 | `setup_global_windows.ps1` | Windows 本機 | 一鍵完成上面前三項 |
+| `setup_chezmoi.ps1` | Windows 本機 | 只裝 chezmoi 並設定跨電腦同步 |
 
 ## 怎麼裝
 
@@ -63,19 +64,41 @@ Antigravity 的 custom instructions 存在 App 內部，沒有一個檔案可以
 
 **1. `chezmoi init` 不要照抄規範原文。**
 原文寫 `chezmoi init mathruffian-dot` —— 那是講師本人的 dotfiles repo，
-照抄會把別人的設定拉下來蓋掉你的。要改成你自己的：
+照抄會把別人的設定拉下來蓋掉你的。
+
+不過**不需要先有 dotfiles repo**（這點實測過）：直接 `chezmoi init` 就會建好本機的
+source 目錄並在裡面 `git init`，遠端之後再補：
 
 ```powershell
-chezmoi init <你的GitHub帳號>/dotfiles
+.\tools\agent-setup\全域設定\setup_chezmoi.ps1
+# 之後有 repo 了再補遠端
+.\tools\agent-setup\全域設定\setup_chezmoi.ps1 -DotfilesRepo https://github.com/你的帳號/dotfiles.git
 ```
 
-沒有 dotfiles repo 就先去 GitHub 開一個（建議設 private，因為 `~/.claude/` 可能含 token）。
-腳本偵測到還沒初始化時會停下來提醒，不會自己亂 init。
+dotfiles repo **建議設 private**，因為 `~/.claude/` 可能含 token。
 
 **2. 雲端 Claude Code 讀不到 `~/.claude/CLAUDE.md`。**
 claude.ai/code 每次都開新容器，家目錄不會保留。所以語音錯字還原、語音回覆這兩條
 另外抄了一份在 repo 根目錄的 `CLAUDE.md` 裡——那份雲端讀得到。
 **改規則時兩邊都要改。**
+
+## chezmoi 日常四個指令
+
+| 指令 | 做什麼 |
+|------|--------|
+| `chezmoi status` | 看哪些設定被改過但還沒收進來（`M` = 有改動） |
+| `chezmoi re-add` | 把改過的設定收回 chezmoi |
+| `chezmoi cd` | 跳到 source 目錄，然後 `git push` |
+| `chezmoi apply --force` | 從 chezmoi 還原設定到家目錄 |
+
+**`--force` 不是可有可無的。** 實測發現：目的地檔案被改過時，`chezmoi apply` 會跳互動
+確認，在腳本或非互動環境裡會直接失敗（`could not open a new TTY`）。
+
+換到另一台電腦時，一行還原：
+
+```powershell
+chezmoi init --apply https://github.com/你的帳號/dotfiles.git
+```
 
 ## 規範原文的小問題
 

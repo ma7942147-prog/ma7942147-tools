@@ -118,42 +118,18 @@ if ($SkipChezmoi) {
     Warn "已指定 -SkipChezmoi，跳過"
     $results["chezmoi"] = "跳過"
 } else {
-    $cz = Get-Command "chezmoi" -ErrorAction SilentlyContinue
-    if (-not $cz) {
-        Say "  要裝：chezmoi（winget: chezmoi.chezmoi）"
-        if ($DryRun) {
-            Warn "DryRun：不實際安裝"
-            $results["chezmoi"] = "DryRun"
-        } else {
-            winget install --id chezmoi.chezmoi --accept-source-agreements --accept-package-agreements
-            $env:Path = [System.Environment]::GetEnvironmentVariable("Path", "User") + ";" + `
-                        [System.Environment]::GetEnvironmentVariable("Path", "Machine")
-            $cz = Get-Command "chezmoi" -ErrorAction SilentlyContinue
-        }
+    # chezmoi 的安裝與初始化都交給專用腳本，這裡不重複一份。
+    # （原本這段假設「一定要先有 dotfiles repo 才能 init」——實測是錯的，
+    #   chezmoi init 可以純本機跑，遠端之後再補。）
+    $czScript = Join-Path $ScriptDir "setup_chezmoi.ps1"
+    if (-not (Test-Path $czScript)) {
+        Warn "找不到 $czScript，跳過 chezmoi"
+        $results["chezmoi"] = "跳過（找不到腳本）"
     } else {
-        Ok "chezmoi 已安裝：$($cz.Source)"
-    }
-
-    if ($cz -and -not $DryRun) {
-        $results["chezmoi"] = "已安裝"
-        # chezmoi init 要指向【你自己的】dotfiles repo。規範原文寫的 mathruffian-dot 是作者的，
-        # 不要直接照抄，那會把別人的設定拉下來蓋掉你的。
-        $czSource = & chezmoi source-path 2>$null
-        if ($LASTEXITCODE -ne 0 -or -not $czSource) {
-            Warn "chezmoi 還沒初始化。"
-            Say "  請先自己建一個 dotfiles repo（可以是 private），然後跑：" "Yellow"
-            Say "    chezmoi init <你的GitHub帳號>/dotfiles" "Yellow"
-            Say "  規範原文寫的 chezmoi init mathruffian-dot 是【作者本人的 repo】，別直接照抄。" "Yellow"
-            $results["chezmoi 追蹤"] = "待初始化"
-        } else {
-            Ok "chezmoi source：$czSource"
-            chezmoi add $dst
-            $settings = Join-Path $ClaudeDir "settings.json"
-            if (Test-Path $settings) { chezmoi add $settings }
-            Ok "已把 ~/.claude/CLAUDE.md 納入 chezmoi 追蹤"
-            Say "  接著自己跑：chezmoi cd → git add -A → git commit → git push" "Gray"
-            $results["chezmoi 追蹤"] = "已加入"
-        }
+        $czArgs = @("-NoProfile", "-ExecutionPolicy", "Bypass", "-File", $czScript)
+        if ($DryRun) { $czArgs += "-DryRun" }
+        & powershell.exe @czArgs
+        $results["chezmoi"] = if ($LASTEXITCODE -eq 0) { "已處理（見上方輸出）" } else { "失敗（離開碼 $LASTEXITCODE）" }
     }
 }
 
