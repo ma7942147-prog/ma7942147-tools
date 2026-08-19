@@ -31,22 +31,29 @@ function parseFrontmatter(lines) {
   return fm;
 }
 
-/** 抓第一個 ```text 區塊，正確跳過內嵌的 ```json 區塊。 */
+/**
+ * 抓出檔案裡所有 ```text 區塊並接起來。
+ * 筆記把「主提示詞」和「想存檔才加的 JSON 附加段」分成兩塊給人看，
+ * 但程式化使用時兩塊都要，因為 JSON 輸出才是可比對的部分。
+ */
 function extractPrompt(lines) {
-  const start = lines.findIndex((l) => l.trim() === '```text');
-  if (start < 0) return null;
-  const body = [];
+  const blocks = [];
+  let body = null;
   let inner = false;
-  for (let i = start + 1; i < lines.length; i++) {
-    const line = lines[i];
-    if (line.trimEnd() === '```') {
-      if (inner) { inner = false; body.push(line); continue; }
-      return body.join('\n');
+  for (const line of lines) {
+    if (body === null) {
+      if (line.trim() === '```text') body = [];
+      continue;
     }
-    if (line.startsWith('```')) { inner = true; body.push(line); continue; }
+    if (line.trimEnd() === '```' && !inner) {
+      blocks.push(body.join('\n'));
+      body = null;
+      continue;
+    }
+    if (line.startsWith('```')) inner = !inner;
     body.push(line);
   }
-  return null;
+  return blocks.length ? blocks.join('\n\n') : null;
 }
 
 const prompts = [];
