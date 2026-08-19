@@ -1,4 +1,4 @@
-# stock-prompts — 美股研究系統（Jenny 八步驟）
+# stock-prompts — 台股研究系統（Jenny 八步驟改台股版）
 
 把美股 YouTuber Jenny 的「由上而下八步驟選股法」變成**可追蹤、可程式化**的提示詞庫。
 
@@ -69,7 +69,7 @@ render.js                        ← 渲染提示詞的 CLI
 
 ## Obsidian 位置
 
-vault `0.0第二大腦——Obsidian` 底下的 `美股研究系統_Jenny八步驟/`。
+vault `0.0第二大腦——Obsidian` 底下的 `台股研究系統_Jenny八步驟/`。
 每天／每週的記錄寫進 `每日筆記/`（`美股-YYYY-MM-DD.md`、`美股週報-YYYY-Www.md`）。
 
 ## 跟既有決策卡的接點

@@ -18,7 +18,7 @@
 （之後加新工具時會自動更新）
 - **mv-creator**：MV 創作追蹤器（主題→歌詞→曲風→Suno→Grok 影片）
 - **edu-video-maker**：影音教學 Agent 工作室（腳本→語音→影片）
-- **stock-prompts**：美股研究系統（Jenny 八步驟）白話提示詞庫，`prompts.json` + `render.js`，筆記同步到 Obsidian vault `0.0第二大腦——Obsidian/美股研究系統_Jenny八步驟/`（入口是「★從這裡開始.md」）
+- **stock-prompts**：台股研究系統（Jenny 八步驟改台股版）白話提示詞庫，`prompts.json` + `render.js`，筆記同步到 Obsidian vault `0.0第二大腦——Obsidian/台股研究系統_Jenny八步驟/`（入口是「★從這裡開始.md」）
 - **telegram-notifier**：共用的 Telegram 通知基礎設施（`/functions` + `tools/shared/telegram-notify.js`），部署步驟見 `tools/telegram-notifier/README.md`；bot 是 @ma7942147_bot
 
 ## 工作注意事項
