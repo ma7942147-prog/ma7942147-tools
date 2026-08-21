@@ -12,6 +12,8 @@ FONT = '/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc'
 SRC = os.environ.get('SCENES', 'scenes')
 OUT = sys.argv[1] if len(sys.argv) > 1 else 'tottori_mv.mp4'
 PREVIEW = os.environ.get('PREVIEW')  # "start,end" seconds
+# 歌詞全体を後ろへずらす秒数。歌い出しより前に字が出るときはここを増やす。
+OFFSET = float(os.environ.get('OFFSET', CFG.get('lyric_offset', 0.0)))
 
 # ---- audio envelope for light pulsing ----
 if os.path.exists('t.npy') and os.path.exists('db.npy'):
@@ -162,9 +164,11 @@ for n in range(nframes):
         # 句と句の間隔が短いときは淡入／淡出も詰める（重ならないように）
         span = nt - lt
         fin = min(0.42, span * 0.22); fout = min(0.50, span * 0.26)
-        end = min(nt - max(0.10, fout * 0.75), lt + 7.5)
-        if lt - fin <= t <= end + fout:
-            a = fade(t, lt, end, fin, fout)
+        # 字は「歌い出しより前」には絶対に出さない：淡入は lt から始めて lt+fin で全開
+        show = lt + OFFSET
+        end = min(show + span - max(0.10, fout * 0.75), show + 7.5)
+        if show <= t <= end + fout:
+            a = fade(t, show + fin, end, fin, fout)
             fr = blend_text(fr, lyric_layer(i), a * (0.90 + 0.10 * e))
     proc.stdin.write((np.clip(fr, 0, 1) * 255).astype(np.uint8).tobytes())
     if n % 240 == 0:
