@@ -9,7 +9,7 @@
     1080
   ],
   "lyric_offset": 0.0,
-  "note": "時間は本人が tap.html で実際に聴きながらタップした実測値（37 行）。2:10.45-2:43.78 の 33 秒はギターソロ。",
+  "note": "歌詞時間は本人がタップした実測値（37 行）。場面は中原大学を軸に 12 枚＋他大学 6 枚。",
   "lines": [
     [
       17.12,
@@ -167,123 +167,117 @@
   "scenes": [
     [
       0.0,
-      "01_dorm_morning",
-      "学生宿舍の朝",
-      "Dawn at the dorms"
+      "01_cycu_gate_dawn",
+      "中原大學　校門的清晨",
+      "CYCU main gate at dawn"
     ],
     [
       17.12,
-      "02_ntu_palm_avenue",
-      "台大　椰林大道",
-      "NTU Palm Boulevard"
+      "02_cycu_avenue",
+      "中原大學　校園大道",
+      "CYCU campus avenue"
     ],
     [
       28.15,
-      "03_bike_lane",
-      "校門前の自転車道",
-      "The bike lane at the gate"
+      "03_cycu_bikes",
+      "中原大學　腳踏車停車場",
+      "CYCU bike parking"
     ],
     [
       39.37,
-      "04_lecture_hall",
-      "教学棟の午後",
-      "Lecture halls, afternoon"
+      "04_cycu_classroom",
+      "中原大學　教學大樓",
+      "CYCU classroom building"
     ],
     [
       50.37,
-      "05_ntnu_red_house",
-      "師大　紅樓",
-      "NTNU Red House"
+      "05_cycu_library_day",
+      "中原大學　圖書館",
+      "CYCU library"
     ],
     [
       61.14,
-      "06_nthu_lake",
-      "清大　成功湖",
-      "NTHU Chenggong Lake"
+      "09_cycu_lawn",
+      "中原大學　大草坪",
+      "CYCU lawn"
     ],
     [
       68.41,
-      "07_ncu_lake",
-      "中央大　中大湖",
-      "NCU Lake"
+      "x_02_ntu_palm_avenue",
+      "臺灣大學　椰林大道",
+      "NTU Palm Boulevard"
     ],
     [
       75.35,
-      "08_nchu_lake",
-      "中興大　中興湖",
-      "NCHU Lake"
-    ],
-    [
-      83.53,
-      "09_thu_luce_chapel",
-      "東海大　路思義教堂",
+      "x_09_thu_luce_chapel",
+      "東海大學　路思義教堂",
       "Tunghai Luce Chapel"
     ],
     [
+      83.53,
+      "x_06_nthu_lake",
+      "清華大學　成功湖",
+      "NTHU Chenggong Lake"
+    ],
+    [
       91.31,
-      "15_rooftop_stars",
-      "宿舍頂樓の星空",
-      "Rooftop, under the stars"
+      "10_cycu_rooftop",
+      "中原大學　宿舍頂樓",
+      "CYCU dorm rooftop"
     ],
     [
       101.93,
-      "10_ncku_banyan",
-      "成大　榕園",
+      "x_10_ncku_banyan",
+      "成功大學　榕園",
       "NCKU Banyan Court"
     ],
     [
       112.47,
-      "11_ccu_lake",
-      "中正大　寧靜湖",
-      "CCU Ningjing Lake"
+      "12_cycu_corridor",
+      "中原大學　長廊的黃昏",
+      "CYCU corridor at dusk"
     ],
     [
       120.06,
-      "14_library_night",
-      "図書館の徹夜",
-      "All-nighter at the library"
+      "13_cycu_library_night",
+      "中原大學　圖書館的通宵",
+      "CYCU library, all-nighter"
     ],
     [
       130.45,
-      "17_nccu_hill",
-      "政大　山あいの校園",
+      "x_17_nccu_hill",
+      "政治大學　山間校園",
       "NCCU in the hills"
     ],
     [
-      140.0,
-      "12_nsysu_sunset",
-      "中山大　西子灣",
-      "NSYSU, Sizihwan sunset"
+      143.0,
+      "x_12_nsysu_sunset",
+      "中山大學　西子灣",
+      "NSYSU, Sizihwan"
     ],
     [
-      152.0,
-      "13_tku_lanterns",
-      "淡江大　宮燈大道",
-      "Tamkang Lantern Avenue"
+      155.0,
+      "17_cycu_chapel_night",
+      "中原大學　教堂之夜",
+      "CYCU chapel at night"
     ],
     [
       163.78,
-      "16_night_market",
-      "宵夜街",
-      "The late-night street"
-    ],
-    [
-      177.23,
-      "02_ntu_palm_avenue",
-      "椰林大道　再び",
-      "Palm Boulevard again"
+      "16_cycu_night_market",
+      "中原夜市",
+      "Chungyuan night market"
     ],
     [
       185.11,
-      "09_thu_luce_chapel",
-      "路思義教堂　夕",
-      "Luce Chapel, evening"
+      "02_cycu_avenue",
+      "中原大學　大道再見",
+      "CYCU avenue, once more"
     ],
     [
       192.57,
-      "18_campus_sunrise",
-      "卒業の朝",
-      "Graduation morning"
+      "18_cycu_graduation",
+      "中原大學　畢業的早晨",
+      "CYCU, graduation morning"
     ]
   ]
 }

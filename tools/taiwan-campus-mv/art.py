@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """新海誠風・鳥取県風景 procedural painter (numpy + Pillow)."""
 import numpy as np
-from PIL import Image, ImageFilter
+from PIL import Image, ImageFilter, ImageDraw
 
 W, H = 2560, 1440
 rng_global = np.random.default_rng(20260821)
@@ -344,3 +344,182 @@ def post(img, bloom=0.42, grain=0.012, vig=0.32, warm=(1.0, 1.0, 1.0), contrast=
 
 def to_image(img):
     return Image.fromarray((np.clip(img, 0, 1) * 255).astype(np.uint8), 'RGB')
+
+# ============================================================
+#  v2: 「平ら過ぎる」を直すための道具立て
+#  - マスクの中に質感を入れる／陽の当たる縁を光らせる
+#  - 消失点を持つ建築（正面と側面の二面）
+#  - 手前のボケた葉、電線、人影、被写界深度、光の粒
+# ============================================================
+
+def texture(img, mask, seed=0, amount=0.16, res=(14,20), tint=None):
+    """マスクの内側にムラを入れる。単色のベタ塗りを避ける。"""
+    n = fbm(H, W, res=res, octaves=6, gain=0.55, seed=seed)
+    v = (n - 0.5) * 2 * amount
+    out = img * (1 + v[..., None] * mask[..., None])
+    if tint is not None:
+        out = over(out, tint, np.clip((n-0.58)*1.8,0,1) * mask * 0.28)
+    return np.clip(out, 0, 1)
+
+def edge_light(img, mask, sun=(0.5,0.3), col='#ffe6bc', strength=0.55, width=3.0):
+    """陽の側の輪郭だけを光らせる。立体感はほぼこれで出る。"""
+    gy, gx = np.gradient(blur(mask, 1.5))
+    sx, sy = sun
+    dx = (sx - NX) * (W/H); dy = (sy - NY)
+    L = np.sqrt(dx**2 + dy**2) + 1e-6
+    lit = np.clip(-(gx*dx/L + gy*dy/L) * 240, 0, 1)
+    return screen(img, col, blur(lit, width) * strength)
+
+def occlusion(img, mask, col='#1a1a22', strength=0.35, r=18):
+    """接地部の影。物が浮かなくなる。"""
+    sh = np.clip(blur(mask, r) - mask, 0, 1)
+    return over(img, col, sh * strength)
+
+def persp_building(img, x0, x1, y_top, y_bot, vp=(0.5, 0.55), depth=0.16,
+                   face='#c8c2b4', side='#8f897c', roof='#3a3a44',
+                   win_cols=6, win_rows=5, win_col='#ffd9a0', win_p=0.5,
+                   seed=1, sun=(0.5,0.3), lit='#fff0cc', frame='#6b6455'):
+    """正面＋側面の二面を持つ建物。消失点に向かって側面が縮む。"""
+    vx, vy = vp
+    def to_vp(x, y, t):
+        return (x + (vx - x)*t, y + (vy - y)*t)
+    # 側面（消失点側）
+    if x1 < vx: sx0, sx1 = x1, x1     # 右へ伸びる
+    else:       sx0, sx1 = x0, x0
+    p_top = to_vp(sx0, y_top, depth); p_bot = to_vp(sx1, y_bot, depth)
+    side_poly = [(sx0, y_top), (p_top[0], p_top[1]), (p_bot[0], p_bot[1]), (sx1, y_bot)]
+    ms = silhouette_mask([side_poly], 0.8)
+    img = over(img, side, ms)
+    img = texture(img, ms, seed=seed+7, amount=0.13, res=(10,8))
+    # 正面
+    front = [(x0, y_top), (x1, y_top), (x1, y_bot), (x0, y_bot)]
+    mf = silhouette_mask([front], 0.8)
+    img = over(img, face, mf)
+    img = texture(img, mf, seed=seed, amount=0.15, res=(12,16))
+    # 屋根の縁
+    rf = silhouette_mask([[(x0-0.006, y_top-0.012),(x1+0.006, y_top-0.012),
+                           (x1+0.006, y_top+0.006),(x0-0.006, y_top+0.006)]], 0.6)
+    img = over(img, roof, rf)
+    # 窓：枠つき・奥行きのある窓
+    im = Image.new('L',(W,H),0); d = ImageDraw.Draw(im)
+    imf = Image.new('L',(W,H),0); df = ImageDraw.Draw(imf)
+    r = np.random.default_rng(seed)
+    cw = (x1-x0)/win_cols; ch = (y_bot-y_top)/win_rows
+    for i in range(win_cols):
+        for j in range(win_rows):
+            wx = x0 + i*cw + cw*0.18; wy = y_top + j*ch + ch*0.20
+            ww = cw*0.64; wh = ch*0.52
+            df.rectangle([(wx-cw*0.05)*W,(wy-ch*0.05)*H,(wx+ww+cw*0.05)*W,(wy+wh+ch*0.05)*H],fill=255)
+            if r.random() < win_p:
+                d.rectangle([wx*W, wy*H, (wx+ww)*W, (wy+wh)*H], fill=int(150+r.random()*105))
+    wf = blur(np.asarray(imf).astype(np.float64)/255, 1.0) * mf
+    wl = blur(np.asarray(im).astype(np.float64)/255, 0.9) * mf
+    img = over(img, frame, np.clip(wf-wl,0,1)*0.55)
+    img = over(img, '#2b3444', wl*0.35)
+    img = screen(img, win_col, wl*0.85)
+    img = screen(img, win_col, blur(wl, 16)*0.30)
+    m_all = np.clip(mf+ms+rf, 0, 1)
+    img = edge_light(img, m_all, sun=sun, col=lit, strength=0.5)
+    img = occlusion(img, m_all, strength=0.30)
+    return img, m_all
+
+def foreground_leaves(img, side='both', col='#0e1a10', seed=9, scale=1.0, blur_px=26, alpha=0.92):
+    """画面の隅に、ピントの合っていない葉。新海誠の定番。"""
+    im = Image.new('L',(W,H),0); d = ImageDraw.Draw(im)
+    r = np.random.default_rng(seed)
+    corners = {'both':[(0.0,0.0),(1.0,0.0)],'left':[(0.0,0.0)],'right':[(1.0,0.0)],
+               'bottom':[(0.0,1.0),(1.0,1.0)],'tl':[(0.0,0.0)]}[side]
+    for (cx, cy) in corners:
+        for k in range(26):
+            bx = cx + (r.random()-0.5)*0.42*scale
+            by = cy + (r.random()-0.5)*0.36*scale
+            L = (0.06+r.random()*0.16)*scale
+            ang = r.random()*6.28
+            pts=[]
+            for m in range(9):
+                u=m/8
+                px = bx+np.cos(ang)*L*u
+                py = by+np.sin(ang)*L*u
+                wdt = L*0.30*np.sin(np.pi*u)
+                pts.append((px, py, wdt))
+            poly=[(p[0]-p[2]*0.5, p[1]) for p in pts]+[(p[0]+p[2]*0.5, p[1]) for p in pts[::-1]]
+            d.polygon([(p[0]*W,p[1]*H) for p in poly], fill=255)
+    a = blur(np.asarray(im).astype(np.float64)/255, blur_px)
+    return over(img, col, np.clip(a*1.25,0,1)*alpha)
+
+def power_lines(img, y0=0.20, sag=0.045, n=5, col='#161a22', seed=11, poles=True):
+    """電柱と電線。台湾の街並みにはこれがある。"""
+    im = Image.new('L',(W,H),0); d = ImageDraw.Draw(im)
+    r = np.random.default_rng(seed)
+    for k in range(n):
+        yy = y0 + k*0.022
+        pts=[(x, yy + sag*np.sin(np.pi*x)) for x in np.linspace(-0.02,1.02,60)]
+        for i in range(len(pts)-1):
+            d.line([(pts[i][0]*W,pts[i][1]*H),(pts[i+1][0]*W,pts[i+1][1]*H)],fill=190,width=2)
+    if poles:
+        for px in (0.14, 0.78):
+            d.rectangle([(px-0.0022)*W, (y0-0.06)*H, (px+0.0022)*W, 0.72*H], fill=210)
+            d.rectangle([(px-0.026)*W,(y0-0.045)*H,(px+0.026)*W,(y0-0.038)*H],fill=210)
+    a = blur(np.asarray(im).astype(np.float64)/255, 1.0)
+    return over(img, col, np.clip(a*0.85,0,1))
+
+def people(img, spec, col='#161822', seed=13, rim=None):
+    """spec: [(x, y_base, height)]。x は W、y は H で正規化されているので、
+    円を円に見せるには x 半径に H/W を掛ける必要がある（ここを間違えると頭が横に潰れる）。"""
+    AR = H / W
+    im = Image.new('L',(W,H),0); d = ImageDraw.Draw(im)
+    r = np.random.default_rng(seed)
+    for (x, yb, h) in spec:
+        hr = 0.062*h                      # 頭の半径（y 単位）
+        hx = hr*AR*1.0
+        head_cy = yb - h + hr
+        d.ellipse([(x-hx)*W,(head_cy-hr)*H,(x+hx)*W,(head_cy+hr)*H],fill=255)
+        d.rectangle([(x-hx*0.30)*W,(head_cy+hr*0.7)*H,(x+hx*0.30)*W,(yb-h*0.80)*H],fill=255)  # 首
+        sw = 0.115*h*AR                   # 肩幅
+        wa = 0.085*h*AR                   # 腰幅
+        d.polygon([((x-sw)*W,(yb-h*0.80)*H),((x+sw)*W,(yb-h*0.80)*H),
+                   ((x+wa)*W,(yb-h*0.44)*H),((x-wa)*W,(yb-h*0.44)*H)],fill=255)
+        for s in (-1,1):                  # 腕
+            d.line([((x+s*sw*0.86)*W,(yb-h*0.78)*H),((x+s*wa*1.15)*W,(yb-h*0.42)*H)],
+                   fill=255,width=max(2,int(h*H*0.045)))
+        for s in (-1,1):                  # 脚
+            jitter=(r.random()-0.5)*0.012*h
+            d.line([((x+s*wa*0.55)*W,(yb-h*0.45)*H),((x+s*wa*0.62+jitter)*W, yb*H)],
+                   fill=255,width=max(2,int(h*H*0.058)))
+    a_ = blur(np.asarray(im).astype(np.float64)/255, 0.9)
+    img = over(img, col, np.clip(a_*1.2,0,1))
+    if rim: img = screen(img, rim, blur(a_,4)*0.28)
+    return img
+
+def dof(img, near_mask=None, far=0.0, amount=2.0):
+    """遠景をわずかにぼかす。空気感が出る。"""
+    if far <= 0: return img
+    b = blur(img, amount)
+    w = np.clip((far - NY)/max(1e-6,far), 0, 1)[..., None]
+    return img*(1-w) + b*w
+
+def motes(img, n=180, seed=15, col='#fff2cc', ymax=1.0):
+    """空気中の光の粒。"""
+    r = np.random.default_rng(seed)
+    layer = np.zeros((H,W))
+    xs=(r.random(n)*W).astype(int); ys=(r.random(n)**0.8*H*ymax).astype(int)
+    np.add.at(layer,(ys,xs), 0.4+r.random(n)*0.6)
+    layer = blur(layer, 3.0)*4.0
+    return screen(img, col, np.clip(layer,0,1)*0.5)
+
+def paving(img, y0, y1, col='#9a9488', line='#7d786c', centre=0.5, w0=0.05, w1=1.4, rows=13, seed=17):
+    """遠近のあるタイル舗装。"""
+    poly=[(centre-w0/2,y0),(centre+w0/2,y0),(centre+w1/2,y1),(centre-w1/2,y1)]
+    m = silhouette_mask([poly],1.0)
+    img = over(img, col, m*0.96)
+    img = texture(img, m, seed=seed, amount=0.10, res=(8,10))
+    im=Image.new('L',(W,H),0); d=ImageDraw.Draw(im)
+    for k in range(rows):
+        u=(k/rows)**1.9
+        y=y0+(y1-y0)*u
+        hw=(w0+(w1-w0)*u)/2
+        d.line([((centre-hw)*W,y*H),((centre+hw)*W,y*H)],fill=255,width=max(1,int(1+u*4)))
+    for s in np.linspace(-0.5,0.5,9):
+        d.line([((centre+s*w0)*W,y0*H),((centre+s*w1)*W,y1*H)],fill=160,width=2)
+    a=blur(np.asarray(im).astype(np.float64)/255,1.0)*m
+    return over(img, line, a*0.35), m
