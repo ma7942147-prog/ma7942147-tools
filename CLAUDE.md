@@ -19,6 +19,7 @@
 - **mv-creator**：MV 創作追蹤器（主題→歌詞→曲風→Suno→Grok 影片）
 - **edu-video-maker**：影音教學 Agent 工作室（腳本→語音→影片）
 - **tottori-mv**：《金蓮》鳥取風景 MV（程式生成 17 張新海誠風景 → 對拍歌詞 → 合成 mp4），見 `tools/tottori-mv/README.md`
+- **taiwan-campus-mv**：〈大學時代〉台灣校園 MV（程式生成 18 張新海誠風校園風景 → 對拍歌詞 → 合成 mp4），見 `tools/taiwan-campus-mv/README.md`
 - **telegram-notifier**：共用的 Telegram 通知基礎設施（`/functions` + `tools/shared/telegram-notify.js`），部署步驟見 `tools/telegram-notifier/README.md`；bot 是 @ma7942147_bot
 
 ## 工作注意事項
