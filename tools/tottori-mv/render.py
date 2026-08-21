@@ -46,7 +46,7 @@ def ken_burns(im, i, p):
     cw, ch = SW * z, SH * z
     x0 = min(max(cx * SW - cw / 2, 0), SW - cw)
     y0 = min(max(cy * SH - ch / 2, 0), SH - ch)
-    return im.resize((OW, OH), Image.LANCZOS, box=(x0, y0, x0 + cw, y0 + ch))
+    return im.resize((OW, OH), Image.BICUBIC, box=(x0, y0, x0 + cw, y0 + ch))
 
 # ---- text layers (cached) ----
 f_lyric = ImageFont.truetype(FONT, 58)
@@ -56,20 +56,21 @@ f_title = ImageFont.truetype(FONT, 96)
 f_sub = ImageFont.truetype(FONT, 30)
 
 def text_layer(items):
-    """items: [(text, font, y, color, align_center|left_x)] -> (rgb, alpha, glow_alpha)"""
+    """文字を描き、bbox に切り詰めた (y0, y1, alpha, glow, shadow) を返す。
+    全画面ではなく帯だけ合成するので数倍速い。"""
     base = Image.new('L', (OW, OH), 0)
     d = ImageDraw.Draw(base)
     for txt, font, y, x in items:
         if not txt: continue
-        if x is None:
-            w = d.textlength(txt, font=font); x_ = (OW - w) / 2
-        else:
-            x_ = x
+        x_ = (OW - d.textlength(txt, font=font)) / 2 if x is None else x
         d.text((x_, y), txt, font=font, fill=255)
-    a = np.asarray(base).astype(np.float32) / 255
-    glow = np.asarray(base.filter(ImageFilter.GaussianBlur(14))).astype(np.float32) / 255
-    shadow = np.asarray(base.filter(ImageFilter.GaussianBlur(4))).astype(np.float32) / 255
-    return a, glow, shadow
+    bb = base.getbbox()
+    if bb is None: return None
+    y0 = max(0, bb[1] - 60); y1 = min(OH, bb[3] + 60)
+    a = np.asarray(base).astype(np.float32)[y0:y1] / 255
+    glow = np.asarray(base.filter(ImageFilter.GaussianBlur(14))).astype(np.float32)[y0:y1] / 255
+    shadow = np.asarray(base.filter(ImageFilter.GaussianBlur(4))).astype(np.float32)[y0:y1] / 255
+    return y0, y1, a, glow, shadow
 
 lines = CFG['lines']
 lyr_cache = {}
@@ -90,16 +91,19 @@ def place_layer(i):
 title_layer = text_layer([(CFG['title'], f_title, OH * 0.40, None),
                           (CFG['subtitle'], f_sub, OH * 0.40 + 130, None)])
 
+GLOW_TINT = np.float32([1.0, 0.93, 0.80])
+INK = np.float32([1.0, 0.985, 0.955])
+
 def blend_text(frame, layers, alpha, warm=1.0):
-    a, glow, shadow = layers
-    if alpha <= 0.002: return frame
-    f = frame
-    f = f * (1 - (shadow * 0.55 * alpha)[..., None])                       # 陰影壓暗
-    g = (glow * alpha * 0.55 * warm)[..., None] * np.array([1.0, 0.93, 0.80])
-    f = 1 - (1 - f) * (1 - np.clip(g, 0, 1))                                # 柔光暈
-    am = (a * alpha)[..., None]
-    f = f * (1 - am) + am * np.array([1.0, 0.985, 0.955])
-    return f
+    if layers is None or alpha <= 0.002: return frame
+    y0, y1, a, glow, shadow = layers
+    f = frame[y0:y1]
+    f *= (1 - (shadow * np.float32(0.55 * alpha))[..., None])          # 影で下地を締める
+    g = np.clip((glow * np.float32(alpha * 0.55 * warm))[..., None] * GLOW_TINT, 0, 1)
+    f = 1 - (1 - f) * (1 - g)                                          # 柔らかい光暈
+    am = (a * np.float32(alpha))[..., None]
+    frame[y0:y1] = f * (1 - am) + am * INK
+    return frame
 
 def fade(t, t0, t1, fin=0.45, fout=0.45):
     if t < t0 - fin or t > t1 + fout: return 0.0
@@ -117,7 +121,7 @@ nframes = int((t_end - t_start) * FPS)
 cmd = [ffmpeg, '-y', '-loglevel', 'error',
        '-f', 'rawvideo', '-pix_fmt', 'rgb24', '-s', f'{OW}x{OH}', '-r', str(FPS), '-i', '-',
        '-ss', str(t_start), '-i', CFG['audio'],
-       '-c:v', 'libx264', '-preset', 'medium', '-crf', '19', '-pix_fmt', 'yuv420p',
+       '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '18', '-pix_fmt', 'yuv420p',
        '-c:a', 'aac', '-b:a', '192k', '-shortest', '-movflags', '+faststart', OUT]
 proc = subprocess.Popen(cmd, stdin=subprocess.PIPE)
 
@@ -130,21 +134,21 @@ for n in range(nframes):
         if t >= s['start']: si = i
     s = scenes[si]
     p = np.clip((t - s['start']) / max(0.1, s['end'] - s['start']), 0, 1)
-    fr = np.asarray(ken_burns(imgs[s['key']], si, p)).astype(np.float32) / 255
+    fr = np.asarray(ken_burns(imgs[s['key']], si, p)).astype(np.float32) / np.float32(255)
     # 交叉溶接
     if si + 1 < len(scenes) and t > s['end'] - XFADE:
         w = (t - (s['end'] - XFADE)) / XFADE
         s2 = scenes[si + 1]
         p2 = (t - s2['start']) / max(0.1, s2['end'] - s2['start'])
-        fr2 = np.asarray(ken_burns(imgs[s2['key']], si + 1, np.clip(p2, 0, 1))).astype(np.float32) / 255
+        fr2 = np.asarray(ken_burns(imgs[s2['key']], si + 1, np.clip(p2, 0, 1))).astype(np.float32) / np.float32(255)
         w = w * w * (3 - 2 * w)
         fr = fr * (1 - w) + fr2 * w
     # 音壓脈動（重拍時整體微亮）
     e = energy(t)
-    fr = np.clip(fr * (0.94 + 0.13 * e), 0, 1)
+    fr = np.clip(fr * np.float32(0.94 + 0.13 * e), 0, 1)
     # 片頭淡入 / 片尾淡出
-    if t < 1.6: fr *= t / 1.6
-    if t > DUR - 4.0: fr *= max(0.0, (DUR - t) / 4.0)
+    if t < 1.6: fr *= np.float32(t / 1.6)
+    if t > DUR - 4.0: fr *= np.float32(max(0.0, (DUR - t) / 4.0))
     # 地名字幕
     a_place = fade(t, s['start'] + 0.6, s['start'] + 4.4, 0.5, 0.9)
     if a_place > 0: fr = blend_text(fr, place_layer(si), a_place * 0.85)
