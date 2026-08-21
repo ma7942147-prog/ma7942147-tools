@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Tottori MV — 歌詞對拍器</title>
+<style>
+:root{--bg:#0d1224;--fg:#e8ecf7;--dim:#8d98b8;--acc:#ffc978;--acc2:#7fb0ff;}
+*{box-sizing:border-box}
+body{margin:0;background:linear-gradient(180deg,#0a0f20,#131a33);color:var(--fg);
+     font:15px/1.7 "Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;}
+header{padding:22px 24px 10px;position:sticky;top:0;backdrop-filter:blur(12px);
+       background:rgba(10,15,32,.86);border-bottom:1px solid #232c4d;z-index:5}
+h1{margin:0 0 4px;font-size:19px;letter-spacing:.06em}
+p.sub{margin:0;color:var(--dim);font-size:13px}
+.bar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:12px}
+button{background:#1b2444;color:var(--fg);border:1px solid #33406c;border-radius:9px;
+       padding:9px 15px;font:inherit;font-size:14px;cursor:pointer}
+button:hover{border-color:var(--acc)}
+button.p{background:var(--acc);color:#241a08;border-color:var(--acc);font-weight:700}
+audio{width:100%;margin-top:12px}
+main{padding:16px 24px 120px;max-width:920px;margin:0 auto}
+.line{display:grid;grid-template-columns:64px 84px 1fr;gap:12px;align-items:center;
+      padding:7px 10px;border-radius:9px;border:1px solid transparent}
+.line.sec{margin-top:18px;border-top:1px dashed #2c3760;padding-top:16px}
+.line:hover{background:#161e3a}
+.line.now{background:#1d2a52;border-color:var(--acc)}
+.idx{color:var(--dim);font-size:12px;text-align:right}
+.t{color:var(--acc2);font-variant-numeric:tabular-nums;cursor:pointer;font-size:14px}
+.t:hover{color:var(--acc);text-decoration:underline}
+.tx{font-size:15px}
+.hint{color:var(--dim);font-size:13px;margin:10px 0 0}
+footer{position:fixed;bottom:0;left:0;right:0;background:rgba(10,15,32,.94);
+       border-top:1px solid #232c4d;padding:12px 24px;display:flex;gap:10px;
+       align-items:center;flex-wrap:wrap}
+kbd{background:#222c4f;border:1px solid #3a4670;border-radius:5px;padding:1px 7px;font-size:12px}
+#out{width:100%;height:170px;margin-top:12px;background:#080d1c;color:#b9e6c0;
+     border:1px solid #2a3358;border-radius:9px;padding:10px;font-family:ui-monospace,monospace;font-size:12px;display:none}
+</style>
+</head>
+<body>
+<header>
+  <h1>《金蓮》— 鳥取風景 MV · 歌詞對拍器</h1>
+  <p class="sub">播放歌曲，聽到每句開頭時按 <kbd>空白鍵</kbd>（或按「打點」），就會把當下秒數寫進那一行。完成後匯出 JSON，覆蓋 <code>timings.json</code> 再跑 <code>python3 render.py</code> 重新輸出 MV。</p>
+  <input type="file" id="file" accept="audio/*" style="margin-top:12px">
+  <audio id="a" controls></audio>
+  <div class="bar">
+    <button class="p" id="tap">打點（空白鍵）</button>
+    <button id="back">⟲ 退回上一行</button>
+    <button id="rew">−5 秒</button>
+    <button id="ff">+5 秒</button>
+    <button id="rate">速度 1.0×</button>
+    <button id="exp">匯出 JSON</button>
+    <button id="reset">還原自動對拍</button>
+  </div>
+  <textarea id="out" spellcheck="false"></textarea>
+</header>
+<main id="list"></main>
+<footer>
+  <span class="hint">目前時間 <b id="cur">0.00</b> s ｜ 下一個要打點的是第 <b id="ptr">1</b> 句</span>
+</footer>
+<script>
+const DEFAULT = [[10.7, "風吹裂了　昨夜未乾的誓言", true], [16.3, "琉璃碎在　掌心化成了深淵", false], [21.6, "我曾以為　緊握就能留住明天", false], [27.7, "直到殘燭　燃盡最後一縷煙", false], [33.0, "你看那漫天揚起的塵埃", true], [38.0, "遮蔽了原本信奉的崇拜", false], [42.9, "在崩塌的廢墟裡　聽骨骼重組的聲響", false], [47.5, "痛楚是蛻變唯一的方向", false], [55.3, "在幻滅裡看清　脆弱的軀殼", true], [58.9, "在沉淪中學會　踏平了坎坷", false], [62.7, "任烈火吞噬　所有的執著與沈默", false], [66.6, "我撕裂黑夜　喚醒心底的佛", false], [70.9, "自灰燼裡重生　綻放成金色金蓮", false], [74.6, "不再問因果　只走向遼闊", false], [78.3, "腳步踩過　冰封刺骨的荒原", true], [83.2, "每道傷口　凝結成新的冠冕", false], [88.2, "懂得放下　才能看懂世間萬變", false], [94.5, "告別昨天　告別曾跪求的圓滿", false], [102.0, "聽雷聲震落最後的悲哀", true], [108.0, "大地正迎來重生的洗牌", false], [114.1, "在無聲的深海裡　浮現出光芒的微亮", false], [119.0, "那是靈魂破繭時的滾燙", false], [123.9, "在幻滅裡看清　脆弱的軀殼", true], [127.2, "在沉淪中學會　踏平了坎坷", false], [130.5, "任烈火吞噬　所有的執著與沈默", false], [133.8, "我撕裂黑夜　喚醒心底的佛", false], [137.1, "自灰燼裡重生　綻放成金色金蓮", false], [140.4, "不再問因果　只走向遼闊", false], [143.7, "嗡　奔流的江河　熄滅了恐慌", true], [148.7, "嗡　萬物的寂滅　是新的初陽", false], [151.9, "不退　不懼　不生　不滅", false], [154.8, "天地空明　一念即超脫", false], [157.9, "光照徹了深淵", true], [163.4, "金蓮開在人間", false], [172.1, "無我　無妄　無牽", false], [178.5, "", false]];
+let lines = JSON.parse(JSON.stringify(DEFAULT));
+const a = document.getElementById('a'), list = document.getElementById('list');
+let ptr = 0;
+
+document.getElementById('file').onchange = e => {
+  const f = e.target.files[0]; if (f) a.src = URL.createObjectURL(f);
+};
+// 若同資料夾有 song.mp3 就直接載入
+a.src = 'song.mp3';
+
+function draw(){
+  list.innerHTML = '';
+  lines.forEach((L,i)=>{
+    const d = document.createElement('div');
+    d.className = 'line' + (L[2] ? ' sec':'');
+    d.innerHTML = `<span class="idx">${i+1}</span>`+
+      `<span class="t" data-i="${i}">${L[0].toFixed(2)}</span>`+
+      `<span class="tx">${L[1]||'<i style="color:#5d688c">（結束）</i>'}</span>`;
+    d.dataset.i = i;
+    list.appendChild(d);
+  });
+  list.querySelectorAll('.t').forEach(el=>el.onclick=()=>{
+    a.currentTime = lines[+el.dataset.i][0]; ptr = +el.dataset.i; sync();
+  });
+}
+function sync(){
+  document.getElementById('ptr').textContent = ptr+1;
+  [...list.children].forEach((c,i)=>c.classList.toggle('now', i===ptr));
+  const el = list.children[ptr];
+  if (el) el.scrollIntoView({block:'center',behavior:'smooth'});
+}
+function tap(){
+  if (ptr >= lines.length) return;
+  lines[ptr][0] = Math.round(a.currentTime*100)/100;
+  list.children[ptr].querySelector('.t').textContent = lines[ptr][0].toFixed(2);
+  ptr++; sync();
+}
+document.getElementById('tap').onclick = tap;
+document.getElementById('back').onclick = ()=>{ ptr=Math.max(0,ptr-1); sync(); };
+document.getElementById('rew').onclick = ()=> a.currentTime = Math.max(0,a.currentTime-5);
+document.getElementById('ff').onclick  = ()=> a.currentTime += 5;
+const rates=[1,0.85,0.7,1.25]; let ri=0;
+document.getElementById('rate').onclick = e=>{ ri=(ri+1)%rates.length; a.playbackRate=rates[ri];
+  e.target.textContent = '速度 '+rates[ri].toFixed(2)+'×'; };
+document.getElementById('reset').onclick = ()=>{ lines=JSON.parse(JSON.stringify(DEFAULT)); ptr=0; draw(); sync(); };
+document.getElementById('exp').onclick = ()=>{
+  const body = lines.map(L=>`    [${L[0].toFixed(1)}, ${JSON.stringify(L[1])}]`).join(',\n');
+  const o = document.getElementById('out');
+  o.style.display='block';
+  o.value = '"lines": [\n' + body + '\n  ]';
+  o.select();
+};
+document.addEventListener('keydown', e=>{
+  if (e.code==='Space' && e.target.tagName!=='TEXTAREA'){ e.preventDefault(); tap(); }
+  if (e.code==='Enter'){ e.preventDefault(); a.paused ? a.play() : a.pause(); }
+});
+a.addEventListener('timeupdate', ()=>{
+  document.getElementById('cur').textContent = a.currentTime.toFixed(2);
+});
+draw(); sync();
+</script>
+</body>
+</html>
