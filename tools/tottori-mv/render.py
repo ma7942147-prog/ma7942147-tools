@@ -159,9 +159,12 @@ for n in range(nframes):
     for i, (lt, txt) in enumerate(lines):
         if not txt: continue
         nt = lines[i + 1][0] if i + 1 < len(lines) else DUR
-        end = min(nt - 0.18, lt + 7.5)
-        if lt - 0.5 <= t <= end + 0.55:
-            a = fade(t, lt, end, 0.42, 0.5)
+        # 句と句の間隔が短いときは淡入／淡出も詰める（重ならないように）
+        span = nt - lt
+        fin = min(0.42, span * 0.22); fout = min(0.50, span * 0.26)
+        end = min(nt - max(0.10, fout * 0.75), lt + 7.5)
+        if lt - fin <= t <= end + fout:
+            a = fade(t, lt, end, fin, fout)
             fr = blend_text(fr, lyric_layer(i), a * (0.90 + 0.10 * e))
     proc.stdin.write((np.clip(fr, 0, 1) * 255).astype(np.uint8).tobytes())
     if n % 240 == 0:
