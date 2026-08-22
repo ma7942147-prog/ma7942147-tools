@@ -38,7 +38,7 @@
        font-weight:700;letter-spacing:.08em;cursor:pointer}
   .sec:hover{background:#2f2745}
   .sec span{float:right;color:var(--dim);font-weight:400;letter-spacing:0}
-  .row{display:grid;grid-template-columns:74px 1fr auto;gap:10px;align-items:center;
+  .row{display:grid;grid-template-columns:74px 58px 1fr auto;gap:10px;align-items:center;
        padding:9px 14px;border-top:1px solid var(--line);cursor:pointer}
   .row:hover{background:#221f2e}
   .row.cur{background:#2f2545;box-shadow:inset 3px 0 0 var(--hot)}
@@ -61,6 +61,13 @@
   .out{width:100%;height:150px;background:#141220;color:var(--ok);border:1px solid var(--line);
        border-radius:8px;font:12px/1.5 ui-monospace,Menlo,Consolas,monospace;padding:9px;resize:vertical}
   .row.warn .tm{color:#ff9c9c}
+  .dl{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;font-size:12px;
+      color:#5d5772;text-align:right}
+  .dl.big{color:#ff9c9c;font-weight:700}
+  #alert{display:none;background:#4a1f28;border:1px solid #7d3040;color:#ffd3d8;
+         padding:9px 14px;border-radius:9px;margin:0 18px;font-size:13px;max-width:1180px}
+  #alert.on{display:block}
+  #alert b{color:#fff}
   input[type=range]{accent-color:var(--accent)}
   .off{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--dim)}
 </style>
@@ -89,6 +96,7 @@
   </div>
 </header>
 
+<div id="alert"></div>
 <main>
   <div class="rows" id="rows"></div>
   <aside>
@@ -100,6 +108,8 @@
       <li><kbd>↓</kbd> 從這句的點往前 1.5 秒重聽</li>
       <li><kbd>Backspace</kbd> 退回上一句重打</li>
       <li>點任一行 = 跳到那句、從那裡繼續打</li>
+      <li style="color:var(--hot)"><b>一行只打一次。</b>歌詞中間的空格只是斷句，
+          「兩個女兒 一個二十五」是一行，不要分成兩下。</li>
     </ul>
     <h2>補償</h2>
     <ul><li>人手按下去一定會慢 0.1~0.2 秒，所以每次打點會自動往前挪。
@@ -135,11 +145,12 @@ let comp = -0.15;
 
 DATA.sections.forEach(s => {
   ends[s.name] = s.end;
-  s.lines.forEach((tx, i) => flat.push({sec: s.name, idx: i, text: tx, t: s.onsets[i], raw: s.onsets[i]}));
+  s.lines.forEach((tx, i) => flat.push({sec: s.name, idx: i, text: tx,
+    base: s.onsets[i], raw: s.onsets[i]}));
 });
 
 // ---- localStorage
-const KEY = 'tap_' + DATA.id;
+const KEY = 'tap_' + DATA.id + '_' + DATA.rev;
 function save(){ try{ localStorage.setItem(KEY, JSON.stringify(
   {t: flat.map(f=>f.raw), ends, comp, cur})); }catch(e){} }
 function load(){
@@ -153,6 +164,7 @@ function load(){
   }catch(e){}
 }
 load();
+if(localStorage.getItem(KEY)===null && DATA.startAt!=null) cur = DATA.startAt;
 
 // ---- 畫面
 function fmt(x){
@@ -169,7 +181,11 @@ function draw(){
     if(f.sec !== last){
       const h = document.createElement('div');
       h.className = 'sec';
-      h.innerHTML = f.sec + '<span>從這段開始重打 ↵</span>';
+      const secLines = flat.filter(x=>x.sec===f.sec);
+      const a0 = secLines[0].base, a1 = ends[f.sec];
+      h.innerHTML = f.sec + ' <span style="color:#6f6890;font-weight:400">'
+                  + fmt(a0).slice(0,-3) + '–' + fmt(a1).slice(0,-3) + '</span>'
+                  + '<span>從這段開始重打 ↵</span>';
       h.onclick = () => {
         cur = i;
         const v = eff(flat[i]);
@@ -182,7 +198,10 @@ function draw(){
     r.className = 'row' + (i===cur?' cur':'') + (f.raw!=null?' done':'');
     const prev = i>0 && flat[i-1].sec===f.sec ? eff(flat[i-1]) : null;
     if(prev!=null && eff(f)!=null && eff(f) <= prev) r.classList.add('warn');
+    const d = (f.raw==null||f.base==null) ? null : (f.raw - f.base);
+    const dtxt = d==null ? '' : (d>=0?'+':'−') + Math.abs(d).toFixed(1);
     r.innerHTML = '<span class="tm">'+fmt(eff(f))+'</span>'+
+                  '<span class="dl'+(d!=null&&Math.abs(d)>3?' big':'')+'">'+dtxt+'</span>'+
                   '<span class="tx">'+f.text+'</span>'+
                   '<span class="nudge"><button data-n="-0.1">−.1</button>'+
                   '<button data-n="-0.02">−</button><button data-n="0.02">+</button>'+
@@ -198,6 +217,12 @@ function draw(){
     };
     rowsEl.appendChild(r);
   });
+  const off = flat.filter(f=>f.raw!=null&&f.base!=null&&Math.abs(f.raw-f.base)>3);
+  const al = document.getElementById('alert');
+  al.className = off.length ? 'on' : '';
+  if(off.length) al.innerHTML = '⚠ 有 <b>'+off.length+'</b> 句和預填時間差超過 3 秒。'
+    + '如果不是故意的，多半是<b>同一行打了兩次</b>（歌詞中間有空格，但一行只要打一次），'
+    + '之後每一句就會整個往前錯位。右邊那欄就是差多少。';
   const done = flat.filter(f=>f.raw!=null).length;
   document.getElementById('prog').textContent = done + ' / ' + flat.length;
   const el = rowsEl.querySelector('.row.cur');
@@ -256,15 +281,22 @@ compEl.oninput = () => {
 };
 
 // ---- 打點
+let overrun = false;
 function tap(){
   if(cur >= flat.length) return;
+  if(cur === flat.length-1 && flat[cur].raw != null && !overrun){
+    overrun = true;
+    alert('已經是最後一句了。再打會蓋掉這一句 —— 如果你覺得後面還有歌詞沒打到，'
+        + '代表前面某處多打了，往上找右邊那欄標紅的地方。');
+    return;
+  }
   flat[cur].raw = au.currentTime;
   const f = flat[cur];
   // 打到某段最後一句時，順手把該段結束時間往後推到下一段開頭之前
   if(cur+1 < flat.length && flat[cur+1].sec !== f.sec) {
     // 段落結束時間交給下一段第一句打點時推算，這裡先不動
   }
-  cur = Math.min(cur+1, flat.length-1);
+  if(cur < flat.length-1){ cur++; overrun = false; }
   refresh();
 }
 function undo(){

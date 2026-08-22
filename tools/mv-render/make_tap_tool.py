@@ -33,13 +33,17 @@ def build(dst=os.path.join(ROOT, "build", "tap.html"), embed=True, download=True
     download=False 用於發佈成 Artifact：那個檢視器不給網頁下載檔案，
     留著下載鈕只會按了沒反應，改成只留「複製全部」。
     """
+    secs = T.section_onsets()
+    start_at = sum(len(l) for _, _, _, l in secs[:6])   # Bridge 第一句
     data = {
         "id": "one_and_only",
+        "rev": 2,
+        "startAt": start_at,
         "outro": list(T.OUTRO_CARD[:2]),
         "sections": [
             {"name": name, "onsets": [round(o, 2) for o in onsets],
              "end": round(end, 2), "lines": lines}
-            for name, onsets, end, lines in T.section_onsets()
+            for name, onsets, end, lines in secs
         ],
     }
     html = open(TEMPLATE, encoding="utf-8").read()
