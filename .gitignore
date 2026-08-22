@@ -14,3 +14,11 @@ credentials.*
 # Node.js
 node_modules/
 package-lock.json
+
+# 音源と書き出した動画は公開 repo に入れない
+song*.mp3
+song*.wav
+*_mv*.mp4
+frames/
+frames2/
+vrout/
