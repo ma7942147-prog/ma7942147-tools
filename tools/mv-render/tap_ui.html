@@ -1,5 +1,8 @@
-<meta charset="utf-8">
-<title>歌詞打點工具</title>
+<title>One and Only 打點台</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700&display=swap">
 <style>
   :root{
     --bg:#12111a; --panel:#1c1a26; --line:#2b2838; --fg:#efecf7;
@@ -7,7 +10,13 @@
   }
   *{box-sizing:border-box}
   body{margin:0;background:var(--bg);color:var(--fg);
-       font:15px/1.6 "Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif}
+       font:15px/1.6 "PingFang TC","Noto Sans TC","Microsoft JhengHei",
+            "Hiragino Sans TC",system-ui,sans-serif}
+  .mono{font-family:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
+        font-variant-numeric:tabular-nums}
+  :focus-visible{outline:2px solid var(--hot);outline-offset:2px}
+  @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;
+    transition:none!important;animation:none!important}}
   header{position:sticky;top:0;z-index:5;background:var(--panel);
          border-bottom:1px solid var(--line);padding:12px 18px}
   h1{margin:0 0 8px;font-size:17px;font-weight:700;letter-spacing:.02em}
@@ -16,7 +25,9 @@
          border-radius:8px;padding:7px 13px;font:inherit;font-size:14px;cursor:pointer}
   button:hover{background:#38334d}
   button.p{background:var(--accent);border-color:var(--accent);color:#1a1226;font-weight:700}
-  .t{font-variant-numeric:tabular-nums;font-size:22px;font-weight:700;min-width:104px}
+  .t{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;
+     font-variant-numeric:tabular-nums;font-size:22px;font-weight:700;min-width:118px;
+     color:var(--hot)}
   .sub{color:var(--dim);font-size:13px}
   #seek{flex:1;min-width:220px;accent-color:var(--accent)}
   main{display:grid;grid-template-columns:1fr 300px;gap:18px;padding:18px;
@@ -32,7 +43,8 @@
   .row:hover{background:#221f2e}
   .row.cur{background:#2f2545;box-shadow:inset 3px 0 0 var(--hot)}
   .row.done .tm{color:var(--ok)}
-  .tm{font-variant-numeric:tabular-nums;color:var(--dim);font-size:14px}
+  .tm{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;
+      font-variant-numeric:tabular-nums;color:var(--dim);font-size:14px}
   .tx{font-size:16px}
   .nudge{display:flex;gap:4px;opacity:0;transition:opacity .12s}
   .row:hover .nudge,.row.cur .nudge{opacity:1}
@@ -58,6 +70,7 @@
   <div class="bar">
     <button class="p" id="pp">▶ 播放</button>
     <span class="t" id="clock">0:00.00</span>
+    <span class="sub mono" id="prog">0 / 45</span>
     <input type="range" id="seek" min="0" max="100" step="0.01" value="0">
     <span class="sub" id="dur">/ 0:00</span>
   </div>
@@ -97,10 +110,12 @@
       <li>用 0.75× 速度打會準很多。</li>
       <li>會自動存在瀏覽器裡，關掉再開不會不見。</li></ul>
     <h2>做完把這段貼回給我</h2>
+    <p style="margin:0 0 8px;font-size:13px;color:var(--dim)">
+      按「複製全部」，整段貼回聊天室給我就好。</p>
     <textarea class="out" id="out" readonly></textarea>
     <div class="bar" style="margin-top:8px">
-      <button class="p" id="copy">複製</button>
-      <button id="dl">下載 tap_times.json</button>
+      <button class="p" id="copy">複製全部</button>
+      __DL__
       <button id="reset">全部重來</button>
     </div>
   </aside>
@@ -183,6 +198,8 @@ function draw(){
     };
     rowsEl.appendChild(r);
   });
+  const done = flat.filter(f=>f.raw!=null).length;
+  document.getElementById('prog').textContent = done + ' / ' + flat.length;
   const el = rowsEl.querySelector('.row.cur');
   if(el) el.scrollIntoView({block:'center', behavior:'smooth'});
 }
@@ -208,10 +225,14 @@ function refresh(){ draw(); out.value = JSON.stringify(exportObj(), null, 1); sa
 document.getElementById('pp').onclick = () => au.paused ? au.play() : au.pause();
 au.onplay  = () => document.getElementById('pp').textContent = '❚❚ 暫停';
 au.onpause = () => document.getElementById('pp').textContent = '▶ 播放';
-au.onloadedmetadata = () => {
+function setDur(){
+  if(!isFinite(au.duration) || !au.duration) return;
   document.getElementById('seek').max = au.duration;
   document.getElementById('dur').textContent = '/ ' + fmt(au.duration).slice(0,-3);
-};
+}
+au.addEventListener('loadedmetadata', setDur);
+au.addEventListener('durationchange', setDur);
+setDur();
 au.ontimeupdate = () => {
   document.getElementById('clock').textContent = fmt(au.currentTime);
   const sk = document.getElementById('seek');
@@ -260,11 +281,7 @@ document.getElementById('copy').onclick = () => {
   const b = document.getElementById('copy'); b.textContent = '已複製 ✓';
   setTimeout(()=>b.textContent='複製', 1200);
 };
-document.getElementById('dl').onclick = () => {
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(new Blob([out.value], {type:'application/json'}));
-  a.download = 'tap_times.json'; a.click();
-};
+__DLJS__
 document.getElementById('reset').onclick = () => {
   if(!confirm('把所有打點清掉，回到原本偵測出來的時間？')) return;
   DATA.sections.forEach(s => s.lines.forEach((_,i)=>{
@@ -287,4 +304,5 @@ document.addEventListener('keydown', e => {
   }
 });
 refresh();
+setDur();
 </script>

@@ -68,7 +68,8 @@ python3 verify_sync.py
 這種時候直接用耳朵打點：
 
 ```bash
-python3 make_tap_tool.py     # 產生 build/tap.html（自帶音檔，8.9 MB）
+python3 make_tap_tool.py                       # build/tap.html，含「下載 tap_times.json」鈕
+python3 make_tap_tool.py out.html --no-download # 給 Artifact 用（檢視器不給網頁下載檔案）
 ```
 
 用瀏覽器打開 `build/tap.html`，按 <kbd>空白鍵</kbd> 在每一句起唱的瞬間打點：
@@ -87,7 +88,8 @@ python3 make_tap_tool.py     # 產生 build/tap.html（自帶音檔，8.9 MB）
   `LAG` 的 0.10 秒讓字幕早一點點浮出來，所以總共比打點時間早 0.25 秒。）
 - 打點結果會自動存在瀏覽器裡，關掉再開不會不見。
 
-打完按「下載 tap_times.json」，把檔案放進 `tools/mv-render/`，
+打完按「下載 tap_times.json」（或按「複製全部」把 JSON 貼出來），
+存成 `tools/mv-render/tap_times.json`，
 `timeline.py` 就會**優先採用手打的時間**（人耳勝過偵測器），
 沒打到的段落自動沿用偵測值。然後重跑：
 

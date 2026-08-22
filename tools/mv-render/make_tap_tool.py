@@ -19,7 +19,20 @@ AUDIO = os.path.join(ROOT, "assets", "song.mp3")
 TEMPLATE = os.path.join(ROOT, "tap_ui.html")
 
 
-def build(dst=os.path.join(ROOT, "build", "tap.html"), embed=True):
+DL_BUTTON = '<button id="dl">下載 tap_times.json</button>'
+DL_SCRIPT = """document.getElementById('dl').onclick = () => {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([out.value], {type:'application/json'}));
+  a.download = 'tap_times.json'; a.click();
+};"""
+
+
+def build(dst=os.path.join(ROOT, "build", "tap.html"), embed=True, download=True):
+    """embed=True 會把 mp3 以 base64 內嵌，產出的單一 HTML 到哪都能開。
+
+    download=False 用於發佈成 Artifact：那個檢視器不給網頁下載檔案，
+    留著下載鈕只會按了沒反應，改成只留「複製全部」。
+    """
     data = {
         "id": "one_and_only",
         "outro": list(T.OUTRO_CARD[:2]),
@@ -37,6 +50,8 @@ def build(dst=os.path.join(ROOT, "build", "tap.html"), embed=True):
         src = os.path.basename(AUDIO)
     html = html.replace("__DATA__", json.dumps(data, ensure_ascii=False))
     html = html.replace("__AUDIO_SRC__", src)
+    html = html.replace("__DL__", DL_BUTTON if download else "")
+    html = html.replace("__DLJS__", DL_SCRIPT if download else "")
     os.makedirs(os.path.dirname(dst), exist_ok=True)
     with open(dst, "w", encoding="utf-8") as f:
         f.write(html)
@@ -46,5 +61,6 @@ def build(dst=os.path.join(ROOT, "build", "tap.html"), embed=True):
 
 
 if __name__ == "__main__":
-    build(sys.argv[1] if len(sys.argv) > 1 else
-          os.path.join(ROOT, "build", "tap.html"))
+    args = [a for a in sys.argv[1:] if not a.startswith("-")]
+    build(args[0] if args else os.path.join(ROOT, "build", "tap.html"),
+          download="--no-download" not in sys.argv)
