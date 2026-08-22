@@ -34,7 +34,7 @@ Style: Outro,Noto Serif CJK TC,58,&H00FFFFFF,&H00FFFFFF,&HC0201028,&HB4000000,0,
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 """
 
-FADE = r"{\fad(280,280)}"
+FADE = r"{\fad(150,220)}"
 
 
 def main(path="build/lyrics.ass"):
