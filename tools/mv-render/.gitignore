@@ -1,3 +1,7 @@
 # 媒體素材與產出不進公開 repo（個人內容），只保留可重現的程式碼
 assets/
 build/
+
+# python
+__pycache__/
+*.pyc
