@@ -1,0 +1,50 @@
+# -*- coding: utf-8 -*-
+"""產生「歌詞打點工具」：一個自帶音檔的單一 HTML，用空白鍵手動對時。
+
+打完之後把匯出的 tap_times.json 放回 tools/mv-render/，
+timeline.py 會自動改用手動打的時間（人耳勝過偵測器），
+再跑 render.py 就會重出 MV。
+
+用法： python3 make_tap_tool.py [輸出路徑]
+"""
+import base64
+import json
+import os
+import sys
+
+import timeline as T
+
+ROOT = os.path.dirname(os.path.abspath(__file__))
+AUDIO = os.path.join(ROOT, "assets", "song.mp3")
+TEMPLATE = os.path.join(ROOT, "tap_ui.html")
+
+
+def build(dst=os.path.join(ROOT, "build", "tap.html"), embed=True):
+    data = {
+        "id": "one_and_only",
+        "outro": list(T.OUTRO_CARD[:2]),
+        "sections": [
+            {"name": name, "onsets": [round(o, 2) for o in onsets],
+             "end": round(end, 2), "lines": lines}
+            for name, onsets, end, lines in T.section_onsets()
+        ],
+    }
+    html = open(TEMPLATE, encoding="utf-8").read()
+    if embed:
+        b64 = base64.b64encode(open(AUDIO, "rb").read()).decode()
+        src = "data:audio/mpeg;base64," + b64
+    else:
+        src = os.path.basename(AUDIO)
+    html = html.replace("__DATA__", json.dumps(data, ensure_ascii=False))
+    html = html.replace("__AUDIO_SRC__", src)
+    os.makedirs(os.path.dirname(dst), exist_ok=True)
+    with open(dst, "w", encoding="utf-8") as f:
+        f.write(html)
+    mb = os.path.getsize(dst) / 1e6
+    print(f"wrote {dst}  ({mb:.1f} MB, {sum(len(s['lines']) for s in data['sections'])} 句)")
+    return dst
+
+
+if __name__ == "__main__":
+    build(sys.argv[1] if len(sys.argv) > 1 else
+          os.path.join(ROOT, "build", "tap.html"))

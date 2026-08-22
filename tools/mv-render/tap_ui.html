@@ -1,0 +1,290 @@
+<meta charset="utf-8">
+<title>歌詞打點工具</title>
+<style>
+  :root{
+    --bg:#12111a; --panel:#1c1a26; --line:#2b2838; --fg:#efecf7;
+    --dim:#9a94b0; --accent:#c48cff; --hot:#ffd166; --ok:#6ee7a8;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--fg);
+       font:15px/1.6 "Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif}
+  header{position:sticky;top:0;z-index:5;background:var(--panel);
+         border-bottom:1px solid var(--line);padding:12px 18px}
+  h1{margin:0 0 8px;font-size:17px;font-weight:700;letter-spacing:.02em}
+  .bar{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  button{background:var(--line);color:var(--fg);border:1px solid #3a3550;
+         border-radius:8px;padding:7px 13px;font:inherit;font-size:14px;cursor:pointer}
+  button:hover{background:#38334d}
+  button.p{background:var(--accent);border-color:var(--accent);color:#1a1226;font-weight:700}
+  .t{font-variant-numeric:tabular-nums;font-size:22px;font-weight:700;min-width:104px}
+  .sub{color:var(--dim);font-size:13px}
+  #seek{flex:1;min-width:220px;accent-color:var(--accent)}
+  main{display:grid;grid-template-columns:1fr 300px;gap:18px;padding:18px;
+       max-width:1180px;margin:0 auto;align-items:start}
+  @media(max-width:820px){main{grid-template-columns:1fr}}
+  .rows{border:1px solid var(--line);border-radius:12px;overflow:hidden}
+  .sec{background:#241f33;color:var(--accent);padding:6px 14px;font-size:12px;
+       font-weight:700;letter-spacing:.08em;cursor:pointer}
+  .sec:hover{background:#2f2745}
+  .sec span{float:right;color:var(--dim);font-weight:400;letter-spacing:0}
+  .row{display:grid;grid-template-columns:74px 1fr auto;gap:10px;align-items:center;
+       padding:9px 14px;border-top:1px solid var(--line);cursor:pointer}
+  .row:hover{background:#221f2e}
+  .row.cur{background:#2f2545;box-shadow:inset 3px 0 0 var(--hot)}
+  .row.done .tm{color:var(--ok)}
+  .tm{font-variant-numeric:tabular-nums;color:var(--dim);font-size:14px}
+  .tx{font-size:16px}
+  .nudge{display:flex;gap:4px;opacity:0;transition:opacity .12s}
+  .row:hover .nudge,.row.cur .nudge{opacity:1}
+  .nudge button{padding:2px 7px;font-size:12px;border-radius:6px}
+  aside{position:sticky;top:132px;max-height:calc(100vh - 152px);overflow:auto;background:var(--panel);border:1px solid var(--line);
+        border-radius:12px;padding:14px}
+  aside h2{font-size:13px;margin:14px 0 6px;color:var(--accent);letter-spacing:.06em}
+  aside h2:first-child{margin-top:0}
+  kbd{background:#332e47;border:1px solid #453e60;border-bottom-width:2px;border-radius:5px;
+      padding:1px 6px;font:inherit;font-size:12px}
+  aside ul{margin:0;padding-left:0;list-style:none}
+  aside li{margin:5px 0;font-size:13px;color:var(--dim)}
+  aside li b{color:var(--fg);font-weight:600}
+  .out{width:100%;height:150px;background:#141220;color:var(--ok);border:1px solid var(--line);
+       border-radius:8px;font:12px/1.5 ui-monospace,Menlo,Consolas,monospace;padding:9px;resize:vertical}
+  .row.warn .tm{color:#ff9c9c}
+  input[type=range]{accent-color:var(--accent)}
+  .off{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--dim)}
+</style>
+
+<header>
+  <h1>《The One and Only》歌詞打點</h1>
+  <div class="bar">
+    <button class="p" id="pp">▶ 播放</button>
+    <span class="t" id="clock">0:00.00</span>
+    <input type="range" id="seek" min="0" max="100" step="0.01" value="0">
+    <span class="sub" id="dur">/ 0:00</span>
+  </div>
+  <div class="bar" style="margin-top:8px">
+    <button id="tap" class="p">⏺ 打點 (空白鍵)</button>
+    <button id="undo">↩ 退一句</button>
+    <button id="back3">◀ −3s</button>
+    <button id="fwd3">+3s ▶</button>
+    <span class="sub">速度</span>
+    <button data-sp="0.5">0.5×</button><button data-sp="0.75">0.75×</button>
+    <button data-sp="1" class="p">1×</button>
+    <label class="off">補償
+      <input type="range" id="comp" min="-0.6" max="0.2" step="0.01" value="-0.15">
+      <span id="compv" style="font-variant-numeric:tabular-nums">−0.15s</span>
+    </label>
+  </div>
+</header>
+
+<main>
+  <div class="rows" id="rows"></div>
+  <aside>
+    <h2>操作</h2>
+    <ul>
+      <li><kbd>空白</kbd> <b>打點</b>：把目前秒數記給反白的那句，然後跳下一句</li>
+      <li><kbd>P</kbd> 播放／暫停</li>
+      <li><kbd>←</kbd> <kbd>→</kbd> 倒退／快轉 3 秒</li>
+      <li><kbd>↓</kbd> 從這句的點往前 1.5 秒重聽</li>
+      <li><kbd>Backspace</kbd> 退回上一句重打</li>
+      <li>點任一行 = 跳到那句、從那裡繼續打</li>
+    </ul>
+    <h2>補償</h2>
+    <ul><li>人手按下去一定會慢 0.1~0.2 秒，所以每次打點會自動往前挪。
+      覺得整體偏晚就把補償拉更負，偏早就拉回來。<b>改補償會即時套用到所有已打的點。</b></li></ul>
+    <h2>建議</h2>
+    <ul><li>後半段（Bridge 之後）本來就最不準，可以只重打那幾段：
+      直接點該段第一句，往下打完就好，前面的點不會動。</li>
+      <li>用 0.75× 速度打會準很多。</li>
+      <li>會自動存在瀏覽器裡，關掉再開不會不見。</li></ul>
+    <h2>做完把這段貼回給我</h2>
+    <textarea class="out" id="out" readonly></textarea>
+    <div class="bar" style="margin-top:8px">
+      <button class="p" id="copy">複製</button>
+      <button id="dl">下載 tap_times.json</button>
+      <button id="reset">全部重來</button>
+    </div>
+  </aside>
+</main>
+
+<audio id="au" src="__AUDIO_SRC__" preload="auto"></audio>
+
+<script>
+const DATA = __DATA__;
+const au = document.getElementById('au');
+const rowsEl = document.getElementById('rows');
+const out = document.getElementById('out');
+let flat = [];          // {sec, idx, text, t}
+let ends = {};          // 段落結束時間
+let cur = 0;
+let comp = -0.15;
+
+DATA.sections.forEach(s => {
+  ends[s.name] = s.end;
+  s.lines.forEach((tx, i) => flat.push({sec: s.name, idx: i, text: tx, t: s.onsets[i], raw: s.onsets[i]}));
+});
+
+// ---- localStorage
+const KEY = 'tap_' + DATA.id;
+function save(){ try{ localStorage.setItem(KEY, JSON.stringify(
+  {t: flat.map(f=>f.raw), ends, comp, cur})); }catch(e){} }
+function load(){
+  try{
+    const s = JSON.parse(localStorage.getItem(KEY)||'null');
+    if(!s || !s.t || s.t.length !== flat.length) return;
+    flat.forEach((f,i)=>{ f.raw = s.t[i]; });
+    if(s.ends) ends = s.ends;
+    if(typeof s.comp === 'number') comp = s.comp;
+    if(typeof s.cur === 'number') cur = s.cur;
+  }catch(e){}
+}
+load();
+
+// ---- 畫面
+function fmt(x){
+  if(x==null||isNaN(x)) return '—';
+  const m = Math.floor(x/60), s = x-m*60;
+  return m + ':' + (s<10?'0':'') + s.toFixed(2);
+}
+function eff(f){ return f.raw==null ? null : Math.max(0, f.raw + comp); }
+
+function draw(){
+  rowsEl.innerHTML = '';
+  let last = null;
+  flat.forEach((f, i) => {
+    if(f.sec !== last){
+      const h = document.createElement('div');
+      h.className = 'sec';
+      h.innerHTML = f.sec + '<span>從這段開始重打 ↵</span>';
+      h.onclick = () => {
+        cur = i;
+        const v = eff(flat[i]);
+        if(v!=null) au.currentTime = Math.max(0, v - 2);
+        refresh();
+      };
+      rowsEl.appendChild(h); last = f.sec;
+    }
+    const r = document.createElement('div');
+    r.className = 'row' + (i===cur?' cur':'') + (f.raw!=null?' done':'');
+    const prev = i>0 && flat[i-1].sec===f.sec ? eff(flat[i-1]) : null;
+    if(prev!=null && eff(f)!=null && eff(f) <= prev) r.classList.add('warn');
+    r.innerHTML = '<span class="tm">'+fmt(eff(f))+'</span>'+
+                  '<span class="tx">'+f.text+'</span>'+
+                  '<span class="nudge"><button data-n="-0.1">−.1</button>'+
+                  '<button data-n="-0.02">−</button><button data-n="0.02">+</button>'+
+                  '<button data-n="0.1">+.1</button></span>';
+    r.onclick = e => {
+      if(e.target.dataset.n){
+        f.raw = (f.raw==null?au.currentTime:f.raw) + parseFloat(e.target.dataset.n);
+        refresh(); return;
+      }
+      cur = i;
+      if(eff(f)!=null) au.currentTime = Math.max(0, eff(f) - 1.5);
+      refresh();
+    };
+    rowsEl.appendChild(r);
+  });
+  const el = rowsEl.querySelector('.row.cur');
+  if(el) el.scrollIntoView({block:'center', behavior:'smooth'});
+}
+
+function exportObj(){
+  const o = {};
+  DATA.sections.forEach(s => {
+    const on = flat.filter(f=>f.sec===s.name).map(f=>{
+      const v = eff(f); return v==null ? null : +v.toFixed(2);
+    });
+    const vals = on.filter(v=>v!=null);
+    const maxOn = vals.length ? Math.max.apply(null, vals) : null;
+    let end = +ends[s.name];
+    if(maxOn != null && end < maxOn + 3.0) end = maxOn + 3.0;
+    o[s.name] = {onsets: on, end: +end.toFixed(2)};
+  });
+  o.OutroCard = {start: DATA.outro[0], end: DATA.outro[1]};
+  return o;
+}
+function refresh(){ draw(); out.value = JSON.stringify(exportObj(), null, 1); save(); }
+
+// ---- 播放控制
+document.getElementById('pp').onclick = () => au.paused ? au.play() : au.pause();
+au.onplay  = () => document.getElementById('pp').textContent = '❚❚ 暫停';
+au.onpause = () => document.getElementById('pp').textContent = '▶ 播放';
+au.onloadedmetadata = () => {
+  document.getElementById('seek').max = au.duration;
+  document.getElementById('dur').textContent = '/ ' + fmt(au.duration).slice(0,-3);
+};
+au.ontimeupdate = () => {
+  document.getElementById('clock').textContent = fmt(au.currentTime);
+  const sk = document.getElementById('seek');
+  if(!sk.dragging) sk.value = au.currentTime;
+};
+const sk = document.getElementById('seek');
+sk.oninput = () => { sk.dragging = true; au.currentTime = +sk.value; };
+sk.onchange = () => { sk.dragging = false; };
+document.querySelectorAll('[data-sp]').forEach(b => b.onclick = () => {
+  au.playbackRate = +b.dataset.sp;
+  document.querySelectorAll('[data-sp]').forEach(x=>x.classList.remove('p'));
+  b.classList.add('p');
+});
+const compEl = document.getElementById('comp');
+compEl.value = comp;
+document.getElementById('compv').textContent = (comp<0?'−':'') + Math.abs(comp).toFixed(2) + 's';
+compEl.oninput = () => {
+  comp = +compEl.value;
+  document.getElementById('compv').textContent = (comp<0?'−':'') + Math.abs(comp).toFixed(2) + 's';
+  refresh();
+};
+
+// ---- 打點
+function tap(){
+  if(cur >= flat.length) return;
+  flat[cur].raw = au.currentTime;
+  const f = flat[cur];
+  // 打到某段最後一句時，順手把該段結束時間往後推到下一段開頭之前
+  if(cur+1 < flat.length && flat[cur+1].sec !== f.sec) {
+    // 段落結束時間交給下一段第一句打點時推算，這裡先不動
+  }
+  cur = Math.min(cur+1, flat.length-1);
+  refresh();
+}
+function undo(){
+  cur = Math.max(0, cur-1);
+  flat[cur].raw = null;
+  refresh();
+}
+document.getElementById('tap').onclick = tap;
+document.getElementById('undo').onclick = undo;
+document.getElementById('back3').onclick = () => au.currentTime = Math.max(0, au.currentTime-3);
+document.getElementById('fwd3').onclick = () => au.currentTime += 3;
+document.getElementById('copy').onclick = () => {
+  out.select(); navigator.clipboard.writeText(out.value);
+  const b = document.getElementById('copy'); b.textContent = '已複製 ✓';
+  setTimeout(()=>b.textContent='複製', 1200);
+};
+document.getElementById('dl').onclick = () => {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([out.value], {type:'application/json'}));
+  a.download = 'tap_times.json'; a.click();
+};
+document.getElementById('reset').onclick = () => {
+  if(!confirm('把所有打點清掉，回到原本偵測出來的時間？')) return;
+  DATA.sections.forEach(s => s.lines.forEach((_,i)=>{
+    const f = flat.find(x=>x.sec===s.name && x.idx===i); f.raw = s.onsets[i];
+  }));
+  cur = 0; refresh();
+};
+
+document.addEventListener('keydown', e => {
+  if(e.target.tagName === 'TEXTAREA' || e.target.type === 'range') return;
+  if(e.code === 'Space'){ e.preventDefault(); tap(); }
+  else if(e.key === 'p' || e.key === 'P'){ e.preventDefault(); au.paused?au.play():au.pause(); }
+  else if(e.key === 'Backspace'){ e.preventDefault(); undo(); }
+  else if(e.key === 'ArrowLeft'){ e.preventDefault(); au.currentTime = Math.max(0, au.currentTime-3); }
+  else if(e.key === 'ArrowRight'){ e.preventDefault(); au.currentTime += 3; }
+  else if(e.key === 'ArrowDown'){
+    e.preventDefault();
+    const v = eff(flat[cur]); if(v!=null) au.currentTime = Math.max(0, v-1.5);
+    au.play();
+  }
+});
+refresh();
+</script>

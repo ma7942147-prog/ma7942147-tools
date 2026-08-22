@@ -39,6 +39,10 @@ v2 修正：第一版把每個「段落」的整段長度平均分給句子，�
 
 # 字幕提前量：負值 = 比人聲早一點點出現（卡拉 OK 慣例，讓人來得及讀）。
 # 配合 150ms 淡入，實際看清楚的時間約等於起唱點。
+import json
+import os
+
+
 LAG = -0.10
 # 每句結束前預留的空隙，避免兩句黏在一起
 GAP = 0.12
@@ -127,19 +131,60 @@ def _weight(line):
     return max(n, 4.0)
 
 
-def build_lines():
-    """產生 (start, end, text)。起唱點量得到就用量到的，量不到才分配。"""
+# 手動打點的結果。存在時一律以它為準（人耳勝過偵測器）。
+TAP_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                        "tap_times.json")
+
+
+def _auto_onsets(span_start, end, lines):
+    """沒有量到起唱點時，依字數權重在演唱區間內分配。"""
+    w = [_weight(t) for t in lines]
+    total = sum(w)
+    onsets, cur = [], span_start
+    for x in w:
+        onsets.append(cur)
+        cur += (end - span_start) * x / total
+    return onsets
+
+
+def section_onsets():
+    """回傳 [(段名, [起唱點...], 段落結束, [歌詞...])]，已套用手動打點覆寫。"""
+    tap = {}
+    if os.path.exists(TAP_FILE):
+        with open(TAP_FILE, encoding="utf-8") as f:
+            tap = json.load(f)
     out = []
-    for sec in SECTIONS:
-        name, onsets, span_start, end, lines = sec
+    for name, onsets, span_start, end, lines in SECTIONS:
         if onsets is None:
-            w = [_weight(t) for t in lines]
-            total = sum(w)
-            onsets = []
-            cur = span_start
-            for x in w:
-                onsets.append(cur)
-                cur += (end - span_start) * x / total
+            onsets = _auto_onsets(span_start, end, lines)
+        onsets, end = list(onsets), end
+        t = tap.get(name)
+        if t:
+            if t.get("onsets"):
+                got = [float(v) for v in t["onsets"] if v is not None]
+                if len(got) == len(lines):
+                    onsets = got
+            if t.get("end") is not None:
+                end = float(t["end"])
+        out.append((name, onsets, end, lines))
+    return out
+
+
+def outro_card():
+    """片尾字卡，同樣可被 tap_times.json 覆寫。"""
+    start, end, lines = OUTRO_CARD
+    if os.path.exists(TAP_FILE):
+        with open(TAP_FILE, encoding="utf-8") as f:
+            t = json.load(f).get("OutroCard") or {}
+        start = float(t.get("start", start))
+        end = float(t.get("end", end))
+    return start, end, lines
+
+
+def build_lines():
+    """產生 (start, end, text)。"""
+    out = []
+    for name, onsets, end, lines in section_onsets():
         starts = list(onsets) + [end]
         for i, text in enumerate(lines):
             out.append((starts[i] + LAG, starts[i + 1] + LAG - GAP, text))
