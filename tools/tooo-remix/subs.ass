@@ -1,0 +1,53 @@
+[Script Info]
+ScriptType: v4.00+
+PlayResX: 1920
+PlayResY: 1080
+WrapStyle: 2
+ScaledBorderAndShadow: yes
+
+[V4+ Styles]
+Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
+Style: Lyric,WenQuanYi Zen Hei,56,&H00FFFFFF,&H00FFFFFF,&HB0301808,&H80000000,0,0,0,0,100,100,1.5,0,1,3.0,1.4,2,90,90,84,1
+
+[Events]
+Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
+Dialogue: 0,0:00:17.44,0:00:20.52,Lyric,,0,0,0,,{\fad(180,220)}一九九三 月很圓
+Dialogue: 0,0:00:20.64,0:00:24.32,Lyric,,0,0,0,,{\fad(180,220)}野狼發動 手心汗
+Dialogue: 0,0:00:24.44,0:00:28.03,Lyric,,0,0,0,,{\fad(180,220)}車站燈下 妳轉身
+Dialogue: 0,0:00:28.15,0:00:32.02,Lyric,,0,0,0,,{\fad(180,220)}我不敢看 妳的臉
+Dialogue: 0,0:00:32.14,0:00:35.70,Lyric,,0,0,0,,{\fad(180,220)}窄裙走過 白襯衫
+Dialogue: 0,0:00:35.82,0:00:39.79,Lyric,,0,0,0,,{\fad(180,220)}仙女下凡 在人間
+Dialogue: 0,0:00:39.91,0:00:43.65,Lyric,,0,0,0,,{\fad(180,220)}妳大兩歲 那又怎樣
+Dialogue: 0,0:00:43.77,0:00:48.12,Lyric,,0,0,0,,{\fad(180,220)}我這顆心 不回頭
+Dialogue: 0,0:00:48.24,0:00:51.66,Lyric,,0,0,0,,{\fad(180,220)}心跳 加速
+Dialogue: 0,0:00:51.78,0:00:55.61,Lyric,,0,0,0,,{\fad(180,220)}數到 四
+Dialogue: 0,0:00:55.73,0:00:59.48,Lyric,,0,0,0,,{\fad(180,220)}放開 手
+Dialogue: 0,0:00:59.60,0:01:03.54,Lyric,,0,0,0,,{\fad(180,220)}就是妳
+Dialogue: 0,0:01:03.66,0:01:06.39,Lyric,,0,0,0,,{\fad(180,220)}The One and Only
+Dialogue: 0,0:01:06.51,0:01:12.10,Lyric,,0,0,0,,{\fad(180,220)}只有妳 只有妳
+Dialogue: 0,0:01:12.22,0:01:15.27,Lyric,,0,0,0,,{\fad(180,220)}One and Only
+Dialogue: 0,0:01:15.39,0:01:18.44,Lyric,,0,0,0,,{\fad(180,220)}只有妳
+Dialogue: 0,0:01:18.56,0:01:21.86,Lyric,,0,0,0,,{\fad(180,220)}妳是我的 The One and Only
+Dialogue: 0,0:01:21.98,0:01:26.12,Lyric,,0,0,0,,{\fad(180,220)}中山北路 走了三十年
+Dialogue: 0,0:01:26.24,0:01:28.52,Lyric,,0,0,0,,{\fad(180,220)}牽過的手 不放手
+Dialogue: 0,0:01:28.64,0:01:30.53,Lyric,,0,0,0,,{\fad(180,220)}吻過的人 就一個
+Dialogue: 0,0:01:30.65,0:01:37.15,Lyric,,0,0,0,,{\fad(180,220)}只愛妳 到白頭
+Dialogue: 0,0:01:42.49,0:01:43.99,Lyric,,0,0,0,,{\fad(180,220)}兩個女兒 像妳的眼
+Dialogue: 0,0:01:44.11,0:01:45.85,Lyric,,0,0,0,,{\fad(180,220)}餐桌的燈 換幾盞
+Dialogue: 0,0:01:45.97,0:01:47.59,Lyric,,0,0,0,,{\fad(180,220)}時間偷走 我們的年輕
+Dialogue: 0,0:01:47.71,0:01:49.76,Lyric,,0,0,0,,{\fad(180,220)}偷不走 那一晚
+Dialogue: 0,0:01:49.88,0:01:51.57,Lyric,,0,0,0,,{\fad(180,220)}妳說的話 我還在聽
+Dialogue: 0,0:01:51.69,0:01:53.60,Lyric,,0,0,0,,{\fad(180,220)}三十年 沒膩過
+Dialogue: 0,0:01:53.72,0:01:55.30,Lyric,,0,0,0,,{\fad(180,220)}油門催過 幾十個秋天
+Dialogue: 0,0:01:55.42,0:01:57.41,Lyric,,0,0,0,,{\fad(180,220)}換我牽 妳慢慢走
+Dialogue: 0,0:01:57.53,0:01:59.16,Lyric,,0,0,0,,{\fad(180,220)}如果能 倒帶回去
+Dialogue: 0,0:01:59.28,0:02:01.13,Lyric,,0,0,0,,{\fad(180,220)}我還要 騎那台野狼
+Dialogue: 0,0:02:01.25,0:02:02.83,Lyric,,0,0,0,,{\fad(180,220)}還要在 月光下面
+Dialogue: 0,0:02:02.95,0:02:09.45,Lyric,,0,0,0,,{\fad(180,220)}緊張到 不敢看妳
+Dialogue: 0,0:02:11.93,0:02:13.77,Lyric,,0,0,0,,{\fad(180,220)}The One and Only
+Dialogue: 0,0:02:13.89,0:02:15.79,Lyric,,0,0,0,,{\fad(180,220)}只有妳 只有妳
+Dialogue: 0,0:02:15.91,0:02:18.40,Lyric,,0,0,0,,{\fad(180,220)}下輩子 還接妳
+Dialogue: 0,0:02:18.52,0:02:23.32,Lyric,,0,0,0,,{\fad(180,220)}只有妳
+Dialogue: 0,0:02:23.44,0:02:29.94,Lyric,,0,0,0,,{\fad(180,220)}一九九三 到今天
+Dialogue: 0,0:02:30.46,0:02:33.93,Lyric,,0,0,0,,{\fad(180,220)}只有妳
+Dialogue: 0,0:02:34.05,0:02:38.43,Lyric,,0,0,0,,{\fad(180,220)}One and Only
