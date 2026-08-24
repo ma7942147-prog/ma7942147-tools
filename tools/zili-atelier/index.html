@@ -217,12 +217,14 @@
   <!-- ===== 設定 ===== -->
   <div class="page" id="page-settings">
     <div class="card" style="border-color:#3d4a2a;background:#171c14">
-      <div class="card-title">🚀 三步驟就能開始生圖</div>
-      <ol class="hint" style="font-size:14px;color:#c8c3bb;padding-left:20px;margin:0;line-height:2">
-        <li>去 <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener" style="color:#c9d97a">aistudio.google.com/apikey</a> 免費申請一組 Google API Key</li>
-        <li>貼到下面的「API Key」欄位</li>
-        <li>按「💾 儲存設定」→ 回工坊按「生成紫璃」</li>
-      </ol>
+      <div class="card-title">🚀 怎麼開始生圖</div>
+      <div class="hint" style="font-size:14px;color:#c8c3bb;line-height:1.9">
+        <b>免費模式</b>（預設）：什麼都不用填，直接回工坊按「生成紫璃」就好。<br>
+        用的是公開的免費生圖服務，尖峰時段可能要等久一點或失敗，再按一次通常就好。<br><br>
+        <b>想要更好的畫質</b>：供應商改成 Google Gemini，到
+        <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener" style="color:#c9d97a">aistudio.google.com/apikey</a>
+        申請 Key 並<b>開通付費</b>（圖片生成免費方案額度是 0，約每張 NT$1.3），貼上 Key 後儲存。
+      </div>
     </div>
 
     <div class="card">
@@ -230,7 +232,8 @@
 
       <label class="fieldlabel" for="provider">API 供應商</label>
       <select id="provider">
-        <option value="gemini">Google Gemini（最簡單，貼 Key 就能用）</option>
+        <option value="free">免費模式（不需 Key，實驗性）</option>
+        <option value="gemini">Google Gemini（畫質最好，需開通付費）</option>
         <option value="xai">xAI（Grok 圖像）</option>
         <option value="openai">OpenAI</option>
         <option value="proxy">Firebase 代理（進階，Key 不放瀏覽器）</option>
@@ -246,9 +249,11 @@
         </select>
       </div>
 
+      <div id="keyRow">
       <label class="fieldlabel" for="apiKey" id="keyLabel">API Key</label>
       <input type="password" id="apiKey" placeholder="貼上你的 API Key" autocomplete="off" />
       <div class="hint" id="keyHint">只存在這台裝置的瀏覽器 localStorage，不會上傳到 GitHub，也不會傳給第三方 —— 只會直接送到你選的 API。</div>
+      </div>
 
       <label class="fieldlabel" for="model">模型名稱</label>
       <input type="text" id="model" placeholder="grok-2-image-1212" />
@@ -314,6 +319,7 @@ const DEFAULT_NEG =
   "no text, no watermark, no extra fingers, keep face / hair / headband identical to the locked character";
 
 const PROVIDER_DEFAULTS = {
+  free:   { model: "flux", endpoint: "https://image.pollinations.ai/prompt" },
   proxy:  { model: "", endpoint: "https://generateimage-<你的專案>.a.run.app" },
   xai:    { model: "grok-2-image-1212", endpoint: "https://api.x.ai/v1/images/generations" },
   openai: { model: "gpt-image-1",       endpoint: "https://api.openai.com/v1/images/generations" },
@@ -417,9 +423,9 @@ const writeJSON = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); 
 
 let state  = { ...DEFAULTS, ...readJSON(K_STATE, {}) };
 let config = {
-  provider: "gemini", apiKey: "", upstream: "xai",
-  model: PROVIDER_DEFAULTS.gemini.model,
-  endpoint: PROVIDER_DEFAULTS.gemini.endpoint, dailyLimit: 10,
+  provider: "free", apiKey: "", upstream: "xai",
+  model: PROVIDER_DEFAULTS.free.model,
+  endpoint: PROVIDER_DEFAULTS.free.endpoint, dailyLimit: 10,
   lock: DEFAULT_LOCK, negative: DEFAULT_NEG,
   ...readJSON(K_CONF, {}),
 };
@@ -523,7 +529,7 @@ function renderQuota() {
 // ============ 生成 ============
 async function generate() {
   errBox.textContent = "";
-  if (!config.apiKey) {
+  if (!config.apiKey && config.provider !== "free") {
     goTab("settings");
     toast(config.provider === "proxy" ? "請先在「設定」填通行碼" : "請先在「設定」填 API Key");
     return;
@@ -567,7 +573,8 @@ function friendlyError(e) {
     return "API Key 不對或沒有權限。請到「設定」重新貼一次 Key。\n原始訊息：" + msg;
   }
   if (/quota|billing|RESOURCE_EXHAUSTED|429/i.test(msg)) {
-    return "這組 Key 的免費額度用完了，或這個模型需要付費方案。\n原始訊息：" + msg;
+    return "Google 的免費方案不提供圖片生成（額度是 0），要用這個模型必須先開通付費。\n" +
+      "想不花錢的話：到「設定」把 API 供應商改成「免費模式」，儲存後再生成。\n原始訊息：" + msg;
   }
   return msg;
 }
@@ -591,8 +598,33 @@ async function postJson(url, payload, headers) {
   }
 }
 
+function loadImage(url, timeoutMs) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const timer = setTimeout(() => {
+      img.onload = img.onerror = null;
+      reject(new Error("等太久沒有回應（超過 " + Math.round(timeoutMs / 1000) + " 秒），免費服務現在可能很忙，再按一次試試"));
+    }, timeoutMs);
+    img.onload = () => { clearTimeout(timer); resolve(url); };
+    img.onerror = () => { clearTimeout(timer); reject(new Error("免費生圖服務沒有回應，可能暫時掛掉了。可以再試一次，或改用 Google Gemini。")); };
+    img.src = url;
+  });
+}
+
+function freeImageUrl(prompt) {
+  const [w, h] = sizeOf().split("x");
+  // 網址有長度限制，免費模式把提示詞縮短一點
+  const short = prompt.replace(/,\s*(no text|keep face)[^,]*/gi, "").slice(0, 900);
+  return config.endpoint.replace(/\/$/, "") + "/" + encodeURIComponent(short) +
+    "?width=" + w + "&height=" + h + "&nologo=true" +
+    "&model=" + encodeURIComponent(config.model || "flux") +
+    "&seed=" + Math.floor(Math.random() * 1e9);
+}
+
 async function callImageApi(prompt) {
   const p = config.provider;
+
+  if (p === "free") return loadImage(freeImageUrl(prompt), 120000);
 
   if (p === "proxy") {
     const r = await postJson(config.endpoint, {
@@ -684,8 +716,12 @@ async function renderAlbum() {
 $("lightbox").onclick = () => $("lightbox").classList.remove("on");
 
 function download(url, name) {
-  const a = document.createElement("a"); a.href = url; a.download = name;
+  const a = document.createElement("a");
+  a.href = url;
+  if (url.startsWith("data:")) a.download = name;
+  else { a.target = "_blank"; a.rel = "noopener"; }
   document.body.appendChild(a); a.click(); a.remove();
+  if (!url.startsWith("data:")) toast("圖片已開新分頁，長按即可存到相簿");
 }
 async function copyText(text) {
   try { await navigator.clipboard.writeText(text); }
@@ -698,8 +734,12 @@ async function copyText(text) {
 
 // ============ 設定頁 ============
 function syncProviderFields() {
-  const isProxy = $("provider").value === "proxy";
+  const v = $("provider").value;
+  const isProxy = v === "proxy";
+  const isFree = v === "free";
   $("upstreamRow").style.display = isProxy ? "block" : "none";
+  $("keyRow").style.display = isFree ? "none" : "block";
+  if (isFree) return;
   $("keyLabel").textContent = isProxy ? "通行碼（對應 secret ZILI_ACCESS_TOKEN）" : "API Key";
   $("apiKey").placeholder = isProxy ? "你設定的通行碼" : "貼上你的 API Key";
   $("keyHint").textContent = isProxy
@@ -745,7 +785,23 @@ $("testBtn").onclick = async () => {
   box.style.color = "#8d8880";
   box.textContent = "測試中…";
   const key = $("apiKey").value.trim();
-  if (!key) { box.style.color = "#ff9c8a"; box.textContent = "請先填 API Key 再測試。"; return; }
+  if (!key && $("provider").value !== "free") {
+    box.style.color = "#ff9c8a"; box.textContent = "請先填 API Key 再測試。"; return;
+  }
+
+  if ($("provider").value === "free") {
+    box.textContent = "測試中…（免費服務有時要等 30 秒以上）";
+    try {
+      await loadImage($("endpoint").value.trim().replace(/\/$/, "") +
+        "/a%20small%20red%20apple?width=256&height=256&nologo=true&seed=" + Date.now(), 60000);
+      box.style.color = "#a8d97a";
+      box.textContent = "✓ 免費生圖服務正常，可以直接回工坊按「生成紫璃」。";
+    } catch (e) {
+      box.style.color = "#ff9c8a";
+      box.textContent = "✗ " + (e.message || e);
+    }
+    return;
+  }
 
   if ($("provider").value !== "gemini") {
     box.textContent = "測試連線目前只支援 Google Gemini。其他供應商請直接按生成看錯誤訊息。";
