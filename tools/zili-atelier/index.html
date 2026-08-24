@@ -216,15 +216,24 @@
 
   <!-- ===== 設定 ===== -->
   <div class="page" id="page-settings">
+    <div class="card" style="border-color:#3d4a2a;background:#171c14">
+      <div class="card-title">🚀 三步驟就能開始生圖</div>
+      <ol class="hint" style="font-size:14px;color:#c8c3bb;padding-left:20px;margin:0;line-height:2">
+        <li>去 <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener" style="color:#c9d97a">aistudio.google.com/apikey</a> 免費申請一組 Google API Key</li>
+        <li>貼到下面的「API Key」欄位</li>
+        <li>按「💾 儲存設定」→ 回工坊按「生成紫璃」</li>
+      </ol>
+    </div>
+
     <div class="card">
       <div class="card-title">🔑 生成服務</div>
 
       <label class="fieldlabel" for="provider">API 供應商</label>
       <select id="provider">
-        <option value="proxy">Firebase 代理（推薦，Key 不放瀏覽器）</option>
+        <option value="gemini">Google Gemini（最簡單，貼 Key 就能用）</option>
         <option value="xai">xAI（Grok 圖像）</option>
         <option value="openai">OpenAI</option>
-        <option value="gemini">Google Gemini</option>
+        <option value="proxy">Firebase 代理（進階，Key 不放瀏覽器）</option>
         <option value="custom">自訂端點（OpenAI 相容）</option>
       </select>
 
@@ -406,8 +415,9 @@ const writeJSON = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); 
 
 let state  = { ...DEFAULTS, ...readJSON(K_STATE, {}) };
 let config = {
-  provider: "proxy", apiKey: "", upstream: "xai", model: "",
-  endpoint: PROVIDER_DEFAULTS.proxy.endpoint, dailyLimit: 10,
+  provider: "gemini", apiKey: "", upstream: "xai",
+  model: PROVIDER_DEFAULTS.gemini.model,
+  endpoint: PROVIDER_DEFAULTS.gemini.endpoint, dailyLimit: 10,
   lock: DEFAULT_LOCK, negative: DEFAULT_NEG,
   ...readJSON(K_CONF, {}),
 };
