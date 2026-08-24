@@ -1,0 +1,733 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>紫璃工坊</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, "Segoe UI", "PingFang TC", "Microsoft JhengHei", sans-serif;
+    background: #0e0e0f; color: #ece7de;
+    padding: 0 0 70px;
+  }
+  .topbar {
+    position: sticky; top: 0; z-index: 30;
+    background: rgba(14,14,15,.96); backdrop-filter: blur(10px);
+    border-bottom: 1px solid #232323; padding: 12px 18px;
+  }
+  .topbar-inner {
+    max-width: 860px; margin: 0 auto;
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  }
+  .brand { font-size: 21px; white-space: nowrap; font-weight: 700; letter-spacing: 2px; line-height: 1.2; }
+  .brand span { font-size: 14px; font-weight: 400; color: #9b9691; margin-left: 5px; }
+  .brand small { display: block; white-space: nowrap; font-size: 11px; color: #6f6a65; letter-spacing: 1px; margin-top: 3px; }
+  .tabs { display: flex; gap: 4px; background: #17171a; border-radius: 999px; padding: 4px; }
+  .tab {
+    border: none; cursor: pointer; font-family: inherit; font-size: 14px;
+    background: none; color: #9b9691; border-radius: 999px; padding: 8px 14px; white-space: nowrap;
+  }
+  .tab.on { background: #efe6d5; color: #17171a; font-weight: 600; }
+
+  .container { max-width: 860px; margin: 0 auto; padding: 0 18px; }
+  .page { display: none; }
+  .page.on { display: block; }
+
+  .card { background: #17171a; border: 1px solid #26262b; border-radius: 16px; padding: 16px; margin-top: 18px; }
+  .card-title { font-size: 13px; color: #9b9691; display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+
+  .refs { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; }
+  .ref { border-radius: 12px; overflow: hidden; background: #101013; }
+  .ref img { width: 100%; aspect-ratio: 3/4; object-fit: cover; display: block; }
+  .ref div { font-size: 12px; color: #8d8880; padding: 6px 4px; text-align: center; }
+
+  .genbar { position: sticky; top: 68px; z-index: 20; background: #0e0e0f; padding: 14px 0 8px; }
+  .btn-main {
+    width: 100%; border: none; border-radius: 999px; cursor: pointer;
+    background: #efe6d5; color: #17171a; font-weight: 700; font-size: 17px;
+    padding: 16px; font-family: inherit;
+  }
+  .btn-main:hover:not(:disabled) { background: #fff6e6; }
+  .btn-main:disabled { opacity: .55; cursor: default; }
+  .genbar-sub { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-top: 8px; font-size: 13px; color: #8d8880; flex-wrap: wrap; }
+  .linkbtn { background: none; border: none; color: #8d8880; cursor: pointer; font-family: inherit; font-size: 13px; padding: 4px; }
+  .linkbtn:hover { color: #efe6d5; }
+
+  .group { margin-top: 22px; }
+  .group h3 { font-size: 13px; color: #8d8880; font-weight: 500; margin: 0 0 10px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 10px; }
+  .chip {
+    border: none; cursor: pointer; font-family: inherit; font-size: 15px;
+    background: #232327; color: #c8c3bb; border-radius: 999px; padding: 12px 20px;
+  }
+  .chip:hover { background: #2e2e33; }
+  .chip.on { background: #efe6d5; color: #17171a; font-weight: 600; }
+
+  label.fieldlabel { display: block; font-size: 13px; color: #8d8880; margin: 22px 0 8px; }
+  textarea, input, select {
+    width: 100%; background: #17171a; border: 1px solid #26262b; border-radius: 14px;
+    color: #ece7de; font-family: inherit; font-size: 15px; padding: 13px;
+  }
+  textarea { min-height: 88px; resize: vertical; }
+  textarea::placeholder, input::placeholder { color: #5d5952; }
+  .hint { font-size: 12px; color: #6f6a65; margin-top: 6px; line-height: 1.6; }
+
+  .stage {
+    position: relative; margin-top: 18px; border-radius: 18px; overflow: hidden;
+    background: #101013; border: 1px solid #26262b; min-height: 320px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .stage img.result { width: 100%; display: block; }
+  .stage .locked { position: absolute; inset: 0; }
+  .stage .locked img { width: 100%; height: 100%; object-fit: cover; filter: brightness(.35) saturate(.7); }
+  .stage .locked-text {
+    position: absolute; inset: 0; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; text-align: center; padding: 20px; gap: 8px;
+  }
+  .stage .locked-text h2 { margin: 0; font-size: 26px; font-weight: 700; }
+  .stage .locked-text p { margin: 0; font-size: 14px; color: #c8c3bb; }
+  .spinner {
+    width: 34px; height: 34px; border-radius: 50%;
+    border: 3px solid #3a3a40; border-top-color: #efe6d5;
+    animation: spin 1s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .stage-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+  .err { color: #ff9c8a; font-size: 13px; line-height: 1.7; white-space: pre-wrap; margin-top: 10px; }
+
+  .mini { background: #232327; color: #c8c3bb; border: none; border-radius: 10px; cursor: pointer;
+          font-family: inherit; font-size: 13px; padding: 9px 14px; }
+  .mini:hover { background: #34343a; }
+  .mini.warn { color: #ff9c8a; }
+
+  pre.prompt {
+    white-space: pre-wrap; word-break: break-word;
+    background: #101013; border: 1px solid #26262b; border-radius: 12px;
+    padding: 14px; font-size: 13px; line-height: 1.6; color: #b9b4ac;
+    font-family: ui-monospace, Menlo, Consolas, monospace; margin: 0;
+  }
+  .saved-item {
+    display: flex; align-items: center; gap: 8px;
+    background: #101013; border: 1px solid #26262b; border-radius: 10px;
+    padding: 8px 12px; margin-bottom: 8px; font-size: 13px;
+  }
+  .saved-item span { flex: 1; color: #c8c3bb; }
+  .empty { color: #5d5952; font-size: 13px; }
+
+  .album { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
+  .shot { background: #101013; border: 1px solid #26262b; border-radius: 14px; overflow: hidden; }
+  .shot img { width: 100%; display: block; cursor: zoom-in; }
+  .shot .meta { font-size: 11px; color: #7d7871; padding: 8px 10px 0; line-height: 1.5; }
+  .shot .row { display: flex; gap: 6px; padding: 8px 10px 10px; flex-wrap: wrap; }
+  .shot .row button { flex: 1; font-size: 12px; padding: 7px 8px; }
+
+  .lightbox {
+    position: fixed; inset: 0; background: rgba(0,0,0,.9); z-index: 60;
+    display: none; align-items: center; justify-content: center; padding: 20px;
+  }
+  .lightbox.on { display: flex; }
+  .lightbox img { max-width: 100%; max-height: 90vh; border-radius: 12px; }
+
+  .toast {
+    position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%);
+    background: #efe6d5; color: #17171a; font-weight: 600; font-size: 14px;
+    padding: 12px 22px; border-radius: 999px; opacity: 0; pointer-events: none;
+    transition: opacity .25s; z-index: 70; max-width: 90vw; text-align: center;
+  }
+  .toast.show { opacity: 1; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-inner">
+    <div class="brand">紫璃<span>工坊</span><small>ZILI ATELIER · 外觀已鎖定</small></div>
+    <div class="tabs">
+      <button class="tab on" data-page="atelier">🖼 工坊</button>
+      <button class="tab" data-page="settings">📖 設定</button>
+      <button class="tab" data-page="album">🖼 相簿</button>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- ===== 工坊 ===== -->
+  <div class="page on" id="page-atelier">
+
+    <div class="card">
+      <div class="card-title">🔒 角色模板已鎖定（臉、髮、髮箍不會變）</div>
+      <div class="refs">
+        <div class="ref"><img src="refs/room-night.jpg" alt="房間夜燈" loading="lazy" /><div>房間夜燈</div></div>
+        <div class="ref"><img src="refs/full-body.jpg" alt="白牆全身" loading="lazy" /><div>白牆全身</div></div>
+        <div class="ref"><img src="refs/garden.jpg" alt="園林外拍" loading="lazy" /><div>園林外拍</div></div>
+        <div class="ref"><img src="refs/lake-swans.jpg" alt="湖畔亭子" loading="lazy" /><div>湖畔亭子</div></div>
+        <div class="ref"><img src="refs/cafe.jpg" alt="窗邊咖啡" loading="lazy" /><div>窗邊咖啡</div></div>
+        <div class="ref"><img src="refs/metro.jpg" alt="捷運月台" loading="lazy" /><div>捷運月台</div></div>
+      </div>
+    </div>
+
+    <div class="genbar">
+      <button class="btn-main" id="genBtn">🖼 生成紫璃</button>
+      <div class="genbar-sub">
+        <span id="quotaLabel">今日剩餘 10 次</span>
+        <span>
+          <button class="linkbtn" id="randomBtn">🎲 隨機</button>
+          <button class="linkbtn" id="saveBtn">☆ 收藏</button>
+          <button class="linkbtn" id="copyBtn">⧉ 複製提示詞</button>
+        </span>
+      </div>
+    </div>
+
+    <div id="groups"></div>
+
+    <label class="fieldlabel" for="extra">額外指示（選填）</label>
+    <textarea id="extra" placeholder="例如：微風吹動髮絲、手上多一本書、黃昏逆光"></textarea>
+
+    <div class="stage" id="stage">
+      <div class="locked" id="lockedCover">
+        <img src="refs/room-night.jpg" alt="" />
+        <div class="locked-text">
+          <div style="font-size:30px">🔒</div>
+          <h2>鎖定的紫璃</h2>
+          <p>選場景與姿勢後生成。臉、髮、髮箍不會變。</p>
+        </div>
+      </div>
+    </div>
+    <div class="stage-actions" id="stageActions" style="display:none">
+      <button class="mini" id="dlBtn">⬇ 下載</button>
+      <button class="mini" id="againBtn">↻ 再生成一張</button>
+      <button class="mini" id="toAlbumBtn">🖼 到相簿看</button>
+    </div>
+    <div class="err" id="errBox"></div>
+
+    <div class="card">
+      <div class="card-title">📝 生成的提示詞</div>
+      <pre class="prompt" id="preview"></pre>
+    </div>
+
+    <div class="card">
+      <div class="card-title">☆ 我的收藏搭配</div>
+      <div id="savedList"></div>
+    </div>
+  </div>
+
+  <!-- ===== 設定 ===== -->
+  <div class="page" id="page-settings">
+    <div class="card" style="border-color:#3d4a2a;background:#171c14">
+      <div class="card-title">🚀 三步驟就能開始生圖</div>
+      <ol class="hint" style="font-size:14px;color:#c8c3bb;padding-left:20px;margin:0;line-height:2">
+        <li>去 <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener" style="color:#c9d97a">aistudio.google.com/apikey</a> 免費申請一組 Google API Key</li>
+        <li>貼到下面的「API Key」欄位</li>
+        <li>按「💾 儲存設定」→ 回工坊按「生成紫璃」</li>
+      </ol>
+    </div>
+
+    <div class="card">
+      <div class="card-title">🔑 生成服務</div>
+
+      <label class="fieldlabel" for="provider">API 供應商</label>
+      <select id="provider">
+        <option value="gemini">Google Gemini（最簡單，貼 Key 就能用）</option>
+        <option value="xai">xAI（Grok 圖像）</option>
+        <option value="openai">OpenAI</option>
+        <option value="proxy">Firebase 代理（進階，Key 不放瀏覽器）</option>
+        <option value="custom">自訂端點（OpenAI 相容）</option>
+      </select>
+
+      <div id="upstreamRow">
+        <label class="fieldlabel" for="upstream">代理背後用哪家</label>
+        <select id="upstream">
+          <option value="xai">xAI（Grok 圖像）</option>
+          <option value="openai">OpenAI</option>
+          <option value="gemini">Google Gemini</option>
+        </select>
+      </div>
+
+      <label class="fieldlabel" for="apiKey" id="keyLabel">API Key</label>
+      <input type="password" id="apiKey" placeholder="貼上你的 API Key" autocomplete="off" />
+      <div class="hint" id="keyHint">只存在這台裝置的瀏覽器 localStorage，不會上傳到 GitHub，也不會傳給第三方 —— 只會直接送到你選的 API。</div>
+
+      <label class="fieldlabel" for="model">模型名稱</label>
+      <input type="text" id="model" placeholder="grok-2-image-1212" />
+
+      <label class="fieldlabel" for="endpoint">端點 URL</label>
+      <input type="text" id="endpoint" placeholder="https://api.x.ai/v1/images/generations" />
+
+      <label class="fieldlabel" for="dailyLimit">每日生成上限</label>
+      <input type="number" id="dailyLimit" min="1" max="999" />
+    </div>
+
+    <div class="card">
+      <div class="card-title">🔒 角色鎖定字串（改這裡就換人設）</div>
+      <textarea id="lockText" style="min-height:150px"></textarea>
+      <label class="fieldlabel" for="negText">反向／保持一致的指示</label>
+      <textarea id="negText" style="min-height:70px"></textarea>
+    </div>
+
+    <div class="card">
+      <div class="card-title">🧹 維護</div>
+      <div class="stage-actions">
+        <button class="mini" id="saveSettingsBtn">💾 儲存設定</button>
+        <button class="mini" id="resetLockBtn">↺ 還原預設人設</button>
+        <button class="mini" id="resetQuotaBtn">↺ 重設今日次數</button>
+        <button class="mini warn" id="clearKeyBtn">🗑 清除 API Key</button>
+      </div>
+      <div class="hint" style="margin-top:12px">
+        建議用「Firebase 代理」：真正的 API Key 存在 Firebase secret，瀏覽器只放通行碼，也不會有 CORS 問題。
+        部署方式見 <code>tools/zili-atelier/README.md</code>。
+        直連模式（xAI／OpenAI／Gemini）是給本機測試用的，若失敗訊息是 Failed to fetch，就是被 CORS 擋住了。
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 相簿 ===== -->
+  <div class="page" id="page-album">
+    <div class="card">
+      <div class="card-title">
+        <span style="flex:1">🖼 生成過的紫璃（存在這台裝置）</span>
+        <button class="mini warn" id="clearAlbumBtn">清空相簿</button>
+      </div>
+      <div class="album" id="albumGrid"></div>
+    </div>
+  </div>
+
+</div>
+
+<div class="lightbox" id="lightbox"><img id="lightboxImg" alt="" /></div>
+<div class="toast" id="toast"></div>
+
+<script>
+// ============ 預設人設（依參考圖歸納） ============
+const DEFAULT_LOCK =
+  "a young woman, very long vivid purple hair with straight blunt bangs, " +
+  "cream-white satin headband with small pearl clips on the side, " +
+  "fair porcelain skin, soft round rosy blush on the cheeks, " +
+  "large gentle grey-brown eyes with long lashes, small nose, full glossy lips, " +
+  "thin silver chain necklace with a tiny heart pendant, slim tall figure, " +
+  "semi-realistic anime illustration, clean soft shading, cinematic soft lighting, high detail, 8k";
+const DEFAULT_NEG =
+  "no text, no watermark, no extra fingers, keep face / hair / headband identical to the locked character";
+
+const PROVIDER_DEFAULTS = {
+  proxy:  { model: "", endpoint: "https://generateimage-<你的專案>.a.run.app" },
+  xai:    { model: "grok-2-image-1212", endpoint: "https://api.x.ai/v1/images/generations" },
+  openai: { model: "gpt-image-1",       endpoint: "https://api.openai.com/v1/images/generations" },
+  gemini: { model: "gemini-2.5-flash-image", endpoint: "https://generativelanguage.googleapis.com/v1beta/models" },
+  custom: { model: "", endpoint: "" },
+};
+
+// ============ 選項 ============
+const GROUPS = [
+  { key: "scene", title: "場景", items: [
+    ["房間夜燈", "in a cozy bedroom at night, warm fairy lights and photo wall, desk with a mug"],
+    ["白牆窗邊", "against a clean white wall beside a bright window, minimal interior"],
+    ["園林湖畔", "in a classical chinese garden by a lake, willow trees, pavilion, green hills"],
+    ["台北雨夜", "on a rainy Taipei street at night, neon signs, wet pavement reflections"],
+    ["窗邊咖啡", "in a cozy cafe by a rain-streaked window, wooden table, coffee cup and books"],
+    ["獨立書店", "in a small independent bookstore, warm shelves of books, soft lamp light"],
+    ["捷運月台", "on a clean metro platform, glass screen doors, train arriving, cool lighting"],
+    ["屋頂夜景", "on a rooftop at night, city skyline bokeh behind"],
+    ["黃昏海邊", "at the seaside during golden sunset, gentle waves, warm backlight"],
+    ["神社鳥居", "on a forest shrine path with red torii gates, mossy stones, sunbeams"],
+    ["攝影棚", "in a photo studio with a plain grey seamless backdrop, soft studio lighting"],
+    ["圖書館", "in a grand library hall, wooden tables, brass lamps, sunlight through tall windows"],
+    ["湖畔亭子", "by a lake with white swans, a traditional wooden pavilion and willow trees behind"],
+    ["宿舍房間", "in a lived-in dorm room, bamboo-print curtains, cluttered desk, cork board on the wall"],
+  ]},
+  { key: "pose", title: "姿勢", items: [
+    ["托腮坐姿", "sitting with chin resting on hand, looking softly at the viewer"],
+    ["靠牆站立", "standing leaning against the wall, one hand touching the wall"],
+    ["正面站立", "standing facing the camera, full body, relaxed arms"],
+    ["半身肖像", "upper body portrait, shoulders facing the camera"],
+    ["回眸", "looking back over the shoulder toward the camera"],
+    ["走路中", "walking mid-step, natural stride, full body"],
+    ["坐在窗台", "sitting on the window sill, knees drawn up"],
+    ["手插口袋", "standing with hands in pockets, slight lean"],
+    ["端著杯子", "holding a warm mug with both hands, steam rising"],
+    ["席地而坐", "sitting on the floor, legs to one side, hands on knee"],
+    ["背影回眸", "seen from behind, turning her head back toward the camera, full body"],
+    ["雙手垂放", "standing straight with both hands relaxed at her sides, facing the camera"],
+  ]},
+  { key: "top", title: "上身", items: [
+    ["淡黃 T 恤", "a soft pale-yellow cotton t-shirt"],
+    ["白襯衫", "a crisp white button-up shirt"],
+    ["絲帶結襯衫", "a white blouse with a ribbon bow tie at the collar"],
+    ["海軍西裝外套", "a navy tailored blazer over a white shirt"],
+    ["針織背心", "a navy knitted vest over a white long-sleeve shirt"],
+    ["米色開襟衫", "a beige cardigan over a cream blouse"],
+    ["直紋襯衫", "a navy-and-white vertical striped short-sleeve shirt"],
+    ["米色針織", "a cream chunky knit sweater"],
+    ["淺灰衛衣", "a light grey sweatshirt"],
+    ["淺駝風衣", "a light camel trench coat over a pale yellow top"],
+    ["奶油色洋裝", "a cream midi dress"],
+    ["家居套裝", "a soft cream loungewear set"],
+  ]},
+  { key: "bottom", title: "下身", items: [
+    ["牛仔褲", "high-waisted blue straight jeans"],
+    ["海軍窄裙", "a navy pencil skirt"],
+    ["黑色窄裙", "a black pencil skirt"],
+    ["米色窄裙", "a beige pencil skirt"],
+    ["灰色窄裙", "a grey pencil skirt"],
+    ["海軍 A 字裙", "a navy A-line skirt"],
+    ["米色 A 字裙", "a beige A-line skirt"],
+    ["黑色迷你裙", "a black mini skirt"],
+    ["海軍迷你裙", "a navy mini skirt"],
+    ["寬褲", "beige wide-leg trousers"],
+  ]},
+  { key: "shoes", title: "鞋子", items: [
+    ["不指定", ""],
+    ["黑色高跟鞋", "black pointed high heels"],
+    ["米色高跟鞋", "nude beige heels"],
+    ["白色球鞋", "white sneakers"],
+    ["樂福鞋", "brown leather loafers"],
+    ["短靴", "black ankle boots"],
+  ]},
+  { key: "mood", title: "氛圍", items: [
+    ["沉思柔和", "pensive soft expression, dreamy mood"],
+    ["平靜直視", "calm neutral expression looking straight at the camera"],
+    ["淡淡微笑", "a faint gentle smile"],
+    ["暮色憂鬱", "melancholic twilight mood, cool blue tones"],
+    ["陽光清新", "fresh sunny mood, bright airy tones"],
+    ["夜燈溫柔", "tender mood under warm night lamp light"],
+  ]},
+  { key: "ratio", title: "畫面比例", items: [
+    ["直向 3:4", "aspect ratio 3:4", "864x1152"],
+    ["海報 2:3", "aspect ratio 2:3", "832x1248"],
+    ["方圖 1:1", "aspect ratio 1:1", "1024x1024"],
+    ["限動 9:16", "aspect ratio 9:16", "768x1344"],
+    ["風景 16:9", "aspect ratio 16:9", "1344x768"],
+    ["橫向 4:3", "aspect ratio 4:3", "1152x864"],
+  ]},
+];
+
+// ============ 儲存 ============
+const K_STATE = "zili-atelier-state";
+const K_SAVED = "zili-atelier-saved";
+const K_CONF  = "zili-atelier-config";
+const K_QUOTA = "zili-atelier-quota";
+const DEFAULTS = { scene: 0, pose: 0, top: 0, bottom: 0, shoes: 0, mood: 0, ratio: 0, extra: "" };
+
+const readJSON = (k, fb) => { try { return JSON.parse(localStorage.getItem(k)) ?? fb; } catch (e) { return fb; } };
+const writeJSON = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} };
+
+let state  = { ...DEFAULTS, ...readJSON(K_STATE, {}) };
+let config = {
+  provider: "gemini", apiKey: "", upstream: "xai",
+  model: PROVIDER_DEFAULTS.gemini.model,
+  endpoint: PROVIDER_DEFAULTS.gemini.endpoint, dailyLimit: 10,
+  lock: DEFAULT_LOCK, negative: DEFAULT_NEG,
+  ...readJSON(K_CONF, {}),
+};
+
+function todayKey() { return new Date().toISOString().slice(0, 10); }
+function quota() {
+  const q = readJSON(K_QUOTA, {});
+  if (q.date !== todayKey()) return { date: todayKey(), used: 0 };
+  return q;
+}
+function remaining() { return Math.max(0, config.dailyLimit - quota().used); }
+function useOne() { const q = quota(); q.used += 1; writeJSON(K_QUOTA, q); renderQuota(); }
+
+// ============ 相簿（IndexedDB） ============
+let db = null;
+function openDB() {
+  return new Promise((res) => {
+    const rq = indexedDB.open("zili-atelier", 1);
+    rq.onupgradeneeded = () => rq.result.createObjectStore("photos", { keyPath: "id" });
+    rq.onsuccess = () => { db = rq.result; res(db); };
+    rq.onerror = () => res(null);
+  });
+}
+function dbAll() {
+  return new Promise((res) => {
+    if (!db) return res([]);
+    const rq = db.transaction("photos").objectStore("photos").getAll();
+    rq.onsuccess = () => res((rq.result || []).sort((a, b) => b.ts - a.ts));
+    rq.onerror = () => res([]);
+  });
+}
+function dbPut(rec)  { return new Promise((res) => { if (!db) return res(); const r = db.transaction("photos", "readwrite").objectStore("photos").put(rec); r.onsuccess = r.onerror = () => res(); }); }
+function dbDel(id)   { return new Promise((res) => { if (!db) return res(); const r = db.transaction("photos", "readwrite").objectStore("photos").delete(id); r.onsuccess = r.onerror = () => res(); }); }
+function dbClear()   { return new Promise((res) => { if (!db) return res(); const r = db.transaction("photos", "readwrite").objectStore("photos").clear(); r.onsuccess = r.onerror = () => res(); }); }
+
+// ============ DOM ============
+const $ = (id) => document.getElementById(id);
+const groupsEl = $("groups"), previewEl = $("preview"), extraEl = $("extra"), savedListEl = $("savedList");
+const stageEl = $("stage"), lockedCover = $("lockedCover"), stageActions = $("stageActions"), errBox = $("errBox");
+const albumGrid = $("albumGrid");
+let lastImage = null; // { dataUrl, prompt, label }
+
+function toast(msg) {
+  const t = $("toast"); t.textContent = msg; t.classList.add("show");
+  clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove("show"), 2200);
+}
+
+// ============ 分頁 ============
+document.querySelectorAll(".tab").forEach(btn => {
+  btn.onclick = () => {
+    document.querySelectorAll(".tab").forEach(b => b.classList.toggle("on", b === btn));
+    document.querySelectorAll(".page").forEach(p => p.classList.toggle("on", p.id === "page-" + btn.dataset.page));
+    if (btn.dataset.page === "album") renderAlbum();
+    window.scrollTo({ top: 0 });
+  };
+});
+function goTab(name) { document.querySelector('.tab[data-page="' + name + '"]').click(); }
+
+// ============ 選項渲染 ============
+function renderGroups() {
+  groupsEl.innerHTML = "";
+  GROUPS.forEach(g => {
+    const box = document.createElement("div");
+    box.className = "group";
+    const h = document.createElement("h3"); h.textContent = g.title; box.appendChild(h);
+    const chips = document.createElement("div"); chips.className = "chips";
+    g.items.forEach((it, i) => {
+      const b = document.createElement("button");
+      b.className = "chip" + (state[g.key] === i ? " on" : "");
+      b.textContent = it[0];
+      b.onclick = () => { state[g.key] = i; renderGroups(); update(); };
+      chips.appendChild(b);
+    });
+    box.appendChild(chips);
+    groupsEl.appendChild(box);
+  });
+}
+const grp = (k) => GROUPS.find(g => g.key === k);
+const labelOf = (k) => grp(k).items[state[k]][0];
+const fragOf  = (k) => grp(k).items[state[k]][1];
+const sizeOf  = () => grp("ratio").items[state.ratio][2];
+
+function buildPrompt() {
+  const outfit = ["wearing", fragOf("top") + ",", fragOf("bottom")]
+    .concat(fragOf("shoes") ? ["with " + fragOf("shoes")] : []).join(" ");
+  return [config.lock, outfit, fragOf("scene"), fragOf("pose"), fragOf("mood"),
+          (state.extra || "").trim(), fragOf("ratio"), config.negative].filter(Boolean).join(", ");
+}
+const comboLabel = () => ["scene", "pose", "top", "bottom", "mood"].map(labelOf).join(" · ");
+
+function update() {
+  state.extra = extraEl.value;
+  previewEl.textContent = buildPrompt();
+  writeJSON(K_STATE, state);
+}
+function renderQuota() {
+  $("quotaLabel").textContent = "今日剩餘 " + remaining() + " 次";
+  $("genBtn").disabled = remaining() <= 0;
+}
+
+// ============ 生成 ============
+async function generate() {
+  errBox.textContent = "";
+  if (!config.apiKey) {
+    goTab("settings");
+    toast(config.provider === "proxy" ? "請先在「設定」填通行碼" : "請先在「設定」填 API Key");
+    return;
+  }
+  if (remaining() <= 0) { toast("今天的次數用完了"); return; }
+
+  const prompt = buildPrompt();
+  const label = comboLabel();
+  $("genBtn").disabled = true;
+  lockedCover.style.display = "none";
+  stageActions.style.display = "none";
+  stageEl.innerHTML = '<div class="spinner"></div>';
+
+  try {
+    const dataUrl = await callImageApi(prompt);
+    useOne();
+    lastImage = { dataUrl, prompt, label };
+    stageEl.innerHTML = '<img class="result" src="' + dataUrl + '" alt="生成的紫璃" />';
+    stageActions.style.display = "flex";
+    await dbPut({ id: "z" + Date.now(), ts: Date.now(), dataUrl, prompt, label });
+    toast("生成完成，已存進相簿 ✓");
+  } catch (e) {
+    stageEl.innerHTML = "";
+    stageEl.appendChild(lockedCover);
+    lockedCover.style.display = "block";
+    errBox.textContent = "生成失敗：" + (e && e.message ? e.message : e) +
+      "\n（若訊息是 Failed to fetch，多半是瀏覽器 CORS 擋住，請改用代理端點）";
+  } finally {
+    $("genBtn").disabled = remaining() <= 0;
+  }
+}
+
+async function callImageApi(prompt) {
+  const p = config.provider;
+
+  if (p === "proxy") {
+    const r = await fetch(config.endpoint, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        token: config.apiKey, provider: config.upstream,
+        model: config.model, prompt: prompt, size: sizeOf(),
+      }),
+    });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(j.error || r.status + " " + r.statusText);
+    if (!j.dataUrl) throw new Error("代理沒有回傳圖片");
+    return j.dataUrl;
+  }
+
+  if (p === "gemini") {
+    const url = config.endpoint.replace(/\/$/, "") + "/" + config.model +
+                ":generateContent?key=" + encodeURIComponent(config.apiKey);
+    const r = await fetch(url, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
+    });
+    const j = await r.json();
+    if (!r.ok) throw new Error(j.error?.message || r.status + " " + r.statusText);
+    const parts = j.candidates?.[0]?.content?.parts || [];
+    const img = parts.find(x => x.inlineData || x.inline_data);
+    const inline = img && (img.inlineData || img.inline_data);
+    if (!inline) throw new Error("回應裡沒有圖片");
+    return "data:" + (inline.mimeType || inline.mime_type || "image/png") + ";base64," + inline.data;
+  }
+
+  // xAI / OpenAI / 自訂：OpenAI 相容的 images/generations
+  const body = { model: config.model, prompt: prompt, n: 1 };
+  if (p === "xai") body.response_format = "b64_json";
+  if (p === "openai") body.size = sizeOf();
+  const r = await fetch(config.endpoint, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "Authorization": "Bearer " + config.apiKey },
+    body: JSON.stringify(body),
+  });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(j.error?.message || j.error || r.status + " " + r.statusText);
+  const d = j.data?.[0];
+  if (!d) throw new Error("回應裡沒有圖片");
+  if (d.b64_json) return "data:image/png;base64," + d.b64_json;
+  if (d.url) return d.url;
+  throw new Error("回應格式看不懂");
+}
+
+// ============ 收藏 ============
+function renderSaved() {
+  const list = readJSON(K_SAVED, []);
+  savedListEl.innerHTML = "";
+  if (!list.length) { savedListEl.innerHTML = '<div class="empty">還沒有收藏。選好一套後按「☆ 收藏」。</div>'; return; }
+  list.forEach((item, idx) => {
+    const row = document.createElement("div"); row.className = "saved-item";
+    const s = document.createElement("span"); s.textContent = item.label;
+    const use = document.createElement("button"); use.className = "mini"; use.textContent = "套用";
+    use.onclick = () => {
+      state = { ...state, ...item.state }; extraEl.value = state.extra || "";
+      renderGroups(); update(); toast("已套用"); window.scrollTo({ top: 0, behavior: "smooth" });
+    };
+    const del = document.createElement("button"); del.className = "mini"; del.textContent = "刪除";
+    del.onclick = () => { const l = readJSON(K_SAVED, []); l.splice(idx, 1); writeJSON(K_SAVED, l); renderSaved(); };
+    row.append(s, use, del); savedListEl.appendChild(row);
+  });
+}
+
+// ============ 相簿 ============
+async function renderAlbum() {
+  const list = await dbAll();
+  albumGrid.innerHTML = "";
+  if (!list.length) { albumGrid.innerHTML = '<div class="empty">還沒有生成過。到「工坊」按「生成紫璃」吧。</div>'; return; }
+  list.forEach(rec => {
+    const box = document.createElement("div"); box.className = "shot";
+    const img = document.createElement("img"); img.src = rec.dataUrl; img.loading = "lazy";
+    img.onclick = () => { $("lightboxImg").src = rec.dataUrl; $("lightbox").classList.add("on"); };
+    const meta = document.createElement("div"); meta.className = "meta";
+    meta.textContent = new Date(rec.ts).toLocaleString("zh-TW") + " · " + rec.label;
+    const row = document.createElement("div"); row.className = "row";
+    const dl = document.createElement("button"); dl.className = "mini"; dl.textContent = "下載";
+    dl.onclick = () => download(rec.dataUrl, "zili-" + rec.id + ".png");
+    const cp = document.createElement("button"); cp.className = "mini"; cp.textContent = "複製提示詞";
+    cp.onclick = () => copyText(rec.prompt);
+    const rm = document.createElement("button"); rm.className = "mini warn"; rm.textContent = "刪除";
+    rm.onclick = async () => { await dbDel(rec.id); renderAlbum(); };
+    row.append(dl, cp, rm);
+    box.append(img, meta, row); albumGrid.appendChild(box);
+  });
+}
+$("lightbox").onclick = () => $("lightbox").classList.remove("on");
+
+function download(url, name) {
+  const a = document.createElement("a"); a.href = url; a.download = name;
+  document.body.appendChild(a); a.click(); a.remove();
+}
+async function copyText(text) {
+  try { await navigator.clipboard.writeText(text); }
+  catch (e) {
+    const ta = document.createElement("textarea"); ta.value = text;
+    document.body.appendChild(ta); ta.select(); document.execCommand("copy"); ta.remove();
+  }
+  toast("已複製 ✓");
+}
+
+// ============ 設定頁 ============
+function syncProviderFields() {
+  const isProxy = $("provider").value === "proxy";
+  $("upstreamRow").style.display = isProxy ? "block" : "none";
+  $("keyLabel").textContent = isProxy ? "通行碼（對應 secret ZILI_ACCESS_TOKEN）" : "API Key";
+  $("apiKey").placeholder = isProxy ? "你設定的通行碼" : "貼上你的 API Key";
+  $("keyHint").textContent = isProxy
+    ? "用代理時真正的 API Key 存在 Firebase secret，瀏覽器只放這組通行碼。"
+    : "只存在這台裝置的瀏覽器 localStorage，不會上傳到 GitHub，也不會傳給第三方 —— 只會直接送到你選的 API。";
+}
+
+function fillSettings() {
+  $("provider").value = config.provider;
+  $("upstream").value = config.upstream || "xai";
+  $("apiKey").value = config.apiKey;
+  $("model").value = config.model;
+  $("endpoint").value = config.endpoint;
+  $("dailyLimit").value = config.dailyLimit;
+  $("lockText").value = config.lock;
+  $("negText").value = config.negative;
+  syncProviderFields();
+}
+$("provider").onchange = () => {
+  const d = PROVIDER_DEFAULTS[$("provider").value];
+  $("model").value = d.model; $("endpoint").value = d.endpoint;
+  syncProviderFields();
+};
+$("saveSettingsBtn").onclick = () => {
+  config = {
+    ...config,
+    provider: $("provider").value,
+    upstream: $("upstream").value,
+    apiKey: $("apiKey").value.trim(),
+    model: $("model").value.trim(),
+    endpoint: $("endpoint").value.trim(),
+    dailyLimit: Math.max(1, parseInt($("dailyLimit").value, 10) || 10),
+    lock: $("lockText").value.trim() || DEFAULT_LOCK,
+    negative: $("negText").value.trim(),
+  };
+  writeJSON(K_CONF, config); update(); renderQuota(); toast("設定已儲存 ✓");
+};
+$("resetLockBtn").onclick = () => { $("lockText").value = DEFAULT_LOCK; $("negText").value = DEFAULT_NEG; toast("已還原預設人設，記得按儲存"); };
+$("resetQuotaBtn").onclick = () => { writeJSON(K_QUOTA, { date: todayKey(), used: 0 }); renderQuota(); toast("今日次數已重設"); };
+$("clearKeyBtn").onclick = () => { config.apiKey = ""; writeJSON(K_CONF, config); $("apiKey").value = ""; toast("API Key 已清除"); };
+$("clearAlbumBtn").onclick = async () => { await dbClear(); renderAlbum(); toast("相簿已清空"); };
+
+// ============ 按鈕 ============
+$("genBtn").onclick = generate;
+$("againBtn").onclick = generate;
+$("copyBtn").onclick = () => copyText(buildPrompt());
+$("dlBtn").onclick = () => lastImage && download(lastImage.dataUrl, "zili.png");
+$("toAlbumBtn").onclick = () => goTab("album");
+$("randomBtn").onclick = () => {
+  GROUPS.forEach(g => { state[g.key] = Math.floor(Math.random() * g.items.length); });
+  renderGroups(); update(); toast("換一套 🎲");
+};
+$("saveBtn").onclick = () => {
+  const list = readJSON(K_SAVED, []);
+  list.unshift({ label: comboLabel(), state: { ...state } });
+  writeJSON(K_SAVED, list.slice(0, 30)); renderSaved(); toast("已收藏 ☆");
+};
+extraEl.addEventListener("input", update);
+
+// ============ 啟動 ============
+extraEl.value = state.extra || "";
+renderGroups(); update(); renderSaved(); renderQuota(); fillSettings();
+openDB().then(renderAlbum);
+</script>
+</body>
+</html>
