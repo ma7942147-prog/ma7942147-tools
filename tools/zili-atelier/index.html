@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>紫璃工坊 · 服裝場景選擇器</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, "Segoe UI", "PingFang TC", "Microsoft JhengHei", sans-serif;
+    background: #0e0e0f;
+    color: #ece7de;
+    padding: 0 0 60px;
+  }
+  .topbar {
+    position: sticky; top: 0; z-index: 20;
+    background: rgba(14,14,15,.94);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid #232323;
+    padding: 14px 20px;
+  }
+  .topbar-inner { max-width: 820px; margin: 0 auto; display: flex; align-items: center; gap: 12px; }
+  .brand { font-size: 22px; font-weight: 700; letter-spacing: 2px; }
+  .brand span { font-size: 15px; font-weight: 400; color: #9b9691; margin-left: 6px; }
+  .brand small { display: block; font-size: 11px; color: #6f6a65; letter-spacing: 1px; margin-top: 2px; }
+  .container { max-width: 820px; margin: 0 auto; padding: 0 20px; }
+
+  .card {
+    background: #17171a; border: 1px solid #26262b; border-radius: 16px;
+    padding: 16px; margin-top: 18px;
+  }
+  .card-title { font-size: 13px; color: #9b9691; display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+
+  .refs { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; }
+  .ref { border-radius: 12px; overflow: hidden; background: #101013; }
+  .ref img { width: 100%; aspect-ratio: 3/4; object-fit: cover; display: block; }
+  .ref div { font-size: 12px; color: #8d8880; padding: 6px 4px; text-align: center; }
+
+  .genbar { position: sticky; top: 62px; z-index: 15; background: #0e0e0f; padding: 14px 0 8px; }
+  .btn-main {
+    width: 100%; border: none; border-radius: 999px; cursor: pointer;
+    background: #efe6d5; color: #17171a; font-weight: 700; font-size: 17px;
+    padding: 16px; font-family: inherit;
+  }
+  .btn-main:hover { background: #fff6e6; }
+  .genbar-sub { display: flex; justify-content: space-between; align-items: center; margin-top: 8px; font-size: 13px; color: #8d8880; }
+  .linkbtn { background: none; border: none; color: #8d8880; cursor: pointer; font-family: inherit; font-size: 13px; padding: 4px; }
+  .linkbtn:hover { color: #efe6d5; }
+
+  .group { margin-top: 22px; }
+  .group h3 { font-size: 13px; color: #8d8880; font-weight: 500; margin: 0 0 10px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 10px; }
+  .chip {
+    border: none; cursor: pointer; font-family: inherit; font-size: 15px;
+    background: #232327; color: #c8c3bb; border-radius: 999px; padding: 12px 20px;
+  }
+  .chip:hover { background: #2e2e33; }
+  .chip.on { background: #efe6d5; color: #17171a; font-weight: 600; }
+
+  label.fieldlabel { display: block; font-size: 13px; color: #8d8880; margin: 22px 0 8px; }
+  textarea {
+    width: 100%; min-height: 90px; resize: vertical;
+    background: #17171a; border: 1px solid #26262b; border-radius: 14px;
+    color: #ece7de; font-family: inherit; font-size: 15px; padding: 14px;
+  }
+  textarea::placeholder { color: #5d5952; }
+
+  pre.prompt {
+    white-space: pre-wrap; word-break: break-word;
+    background: #101013; border: 1px solid #26262b; border-radius: 12px;
+    padding: 14px; font-size: 13px; line-height: 1.6; color: #b9b4ac;
+    font-family: ui-monospace, Menlo, Consolas, monospace; margin: 0;
+  }
+  .saved-item {
+    display: flex; align-items: center; gap: 8px;
+    background: #101013; border: 1px solid #26262b; border-radius: 10px;
+    padding: 8px 12px; margin-bottom: 8px; font-size: 13px;
+  }
+  .saved-item span { flex: 1; color: #c8c3bb; }
+  .mini { background: #232327; color: #c8c3bb; border: none; border-radius: 8px; cursor: pointer;
+          font-family: inherit; font-size: 12px; padding: 6px 10px; }
+  .mini:hover { background: #34343a; }
+  .empty { color: #5d5952; font-size: 13px; }
+  .toast {
+    position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%);
+    background: #efe6d5; color: #17171a; font-weight: 600; font-size: 14px;
+    padding: 12px 22px; border-radius: 999px; opacity: 0; pointer-events: none;
+    transition: opacity .25s; z-index: 50;
+  }
+  .toast.show { opacity: 1; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-inner">
+    <div class="brand">紫璃<span>工坊</span><small>ZILI ATELIER · 外觀已鎖定</small></div>
+  </div>
+</div>
+
+<div class="container">
+
+  <div class="card">
+    <div class="card-title">🔒 角色模板已鎖定（臉、髮、髮箍不會變）</div>
+    <div class="refs">
+      <div class="ref"><img src="refs/room-night.jpg" alt="房間夜燈" loading="lazy" /><div>房間夜燈</div></div>
+      <div class="ref"><img src="refs/full-body.jpg" alt="白牆全身" loading="lazy" /><div>白牆全身</div></div>
+      <div class="ref"><img src="refs/wall-illust.jpg" alt="白牆插畫感" loading="lazy" /><div>白牆插畫感</div></div>
+      <div class="ref"><img src="refs/garden.jpg" alt="園林外拍" loading="lazy" /><div>園林外拍</div></div>
+      <div class="ref"><img src="refs/lake-swans.jpg" alt="湖畔亭子" loading="lazy" /><div>湖畔亭子</div></div>
+      <div class="ref"><img src="refs/cafe.jpg" alt="窗邊咖啡" loading="lazy" /><div>窗邊咖啡</div></div>
+      <div class="ref"><img src="refs/torii.jpg" alt="神社鳥居" loading="lazy" /><div>神社鳥居</div></div>
+      <div class="ref"><img src="refs/metro.jpg" alt="捷運月台" loading="lazy" /><div>捷運月台</div></div>
+      <div class="ref"><img src="refs/metro-back.jpg" alt="月台背影" loading="lazy" /><div>月台背影</div></div>
+      <div class="ref"><img src="refs/library.jpg" alt="圖書館" loading="lazy" /><div>圖書館</div></div>
+      <div class="ref"><img src="refs/studio.jpg" alt="攝影棚" loading="lazy" /><div>攝影棚</div></div>
+      <div class="ref"><img src="refs/dorm.jpg" alt="宿舍房間" loading="lazy" /><div>宿舍房間</div></div>
+</div>
+  </div>
+
+  <div class="genbar">
+    <button class="btn-main" id="copyBtn">🖼 複製提示詞</button>
+    <div class="genbar-sub">
+      <button class="linkbtn" id="randomBtn">🎲 隨機搭配</button>
+      <button class="linkbtn" id="saveBtn">☆ 收藏這套</button>
+      <button class="linkbtn" id="resetBtn">↺ 回到預設</button>
+    </div>
+  </div>
+
+  <div id="groups"></div>
+
+  <label class="fieldlabel" for="extra">額外指示（選填）</label>
+  <textarea id="extra" placeholder="例如：微風吹動髮絲、手上多一本書、黃昏逆光"></textarea>
+
+  <div class="card">
+    <div class="card-title">📝 生成的提示詞</div>
+    <pre class="prompt" id="preview"></pre>
+  </div>
+
+  <div class="card">
+    <div class="card-title">☆ 我的收藏搭配</div>
+    <div id="savedList"></div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ---- 鎖定的角色模板：從參考圖歸納出的固定外觀 ----
+const CHARACTER_LOCK =
+  "a young woman, very long vivid purple hair with straight blunt bangs, " +
+  "cream-white satin headband with small pearl clips on the side, " +
+  "fair porcelain skin, soft round rosy blush on the cheeks, " +
+  "large gentle grey-brown eyes with long lashes, small nose, full glossy lips, " +
+  "thin silver chain necklace with a tiny heart pendant, slim tall figure, " +
+  "semi-realistic anime illustration, clean soft shading, cinematic soft lighting, high detail, 8k";
+
+const NEGATIVE = "no text, no watermark, no extra fingers, keep face / hair / headband identical to reference";
+
+// ---- 選項資料：中文標籤 + 英文提示詞片段 ----
+const GROUPS = [
+  { key: "scene", title: "場景", items: [
+    ["房間夜燈", "in a cozy bedroom at night, warm fairy lights and photo wall, desk with a mug"],
+    ["白牆窗邊", "against a clean white wall beside a bright window, minimal interior"],
+    ["園林湖畔", "in a classical chinese garden by a lake, willow trees, pavilion, green hills"],
+    ["台北雨夜", "on a rainy Taipei street at night, neon signs, wet pavement reflections"],
+    ["窗邊咖啡", "in a cozy cafe by a rain-streaked window, wooden table, coffee cup and books"],
+    ["獨立書店", "in a small independent bookstore, warm shelves of books, soft lamp light"],
+    ["捷運月台", "on a clean metro platform, glass screen doors, train arriving, cool lighting"],
+    ["屋頂夜景", "on a rooftop at night, city skyline bokeh behind"],
+    ["黃昏海邊", "at the seaside during golden sunset, gentle waves, warm backlight"],
+    ["神社鳥居", "on a forest shrine path with red torii gates, mossy stones, sunbeams"],
+    ["攝影棚", "in a photo studio with a plain grey seamless backdrop, soft studio lighting"],
+    ["圖書館", "in a grand library hall, wooden tables, brass lamps, sunlight through tall windows"],
+    ["湖畔亭子", "sitting by a lake with white swans, a traditional wooden pavilion and willow trees behind"],
+    ["宿舍房間", "in a lived-in dorm room, bamboo-print curtains, cluttered desk, cork board on the wall"],
+  ]},
+  { key: "pose", title: "姿勢", items: [
+    ["托腮坐姿", "sitting with chin resting on hand, looking softly at the viewer"],
+    ["靠牆站立", "standing leaning against the wall, one hand touching the wall"],
+    ["正面站立", "standing facing the camera, full body, relaxed arms"],
+    ["半身肖像", "upper body portrait, shoulders facing the camera"],
+    ["回眸", "looking back over the shoulder toward the camera"],
+    ["走路中", "walking mid-step, natural stride, full body"],
+    ["坐在窗台", "sitting on the window sill, knees drawn up"],
+    ["手插口袋", "standing with hands in pockets, slight lean"],
+    ["端著杯子", "holding a warm mug with both hands, steam rising"],
+    ["席地而坐", "sitting on the floor, legs to one side, hands on knee"],
+    ["背影回眸", "seen from behind, turning her head back toward the camera, full body"],
+    ["雙手垂放", "standing straight with both hands relaxed at her sides, facing the camera"],
+  ]},
+  { key: "top", title: "上身", items: [
+    ["淡黃 T 恤", "a soft pale-yellow cotton t-shirt"],
+    ["白襯衫", "a crisp white button-up shirt"],
+    ["絲帶結襯衫", "a white blouse with a ribbon bow tie at the collar"],
+    ["海軍西裝外套", "a navy tailored blazer over a white shirt"],
+    ["針織背心", "a navy knitted vest over a white long-sleeve shirt"],
+    ["米色開襟衫", "a beige cardigan over a cream blouse"],
+    ["直紋襯衫", "a navy-and-white vertical striped short-sleeve shirt"],
+    ["米色針織", "a cream chunky knit sweater"],
+    ["淺灰衛衣", "a light grey sweatshirt"],
+    ["淺駝風衣", "a light camel trench coat over a pale yellow top"],
+    ["奶油色洋裝", "a cream midi dress"],
+    ["家居套裝", "a soft cream loungewear set"],
+  ]},
+  { key: "bottom", title: "下身", items: [
+    ["牛仔褲", "high-waisted blue straight jeans"],
+    ["海軍窄裙", "a navy pencil skirt"],
+    ["黑色窄裙", "a black pencil skirt"],
+    ["米色窄裙", "a beige pencil skirt"],
+    ["灰色窄裙", "a grey pencil skirt"],
+    ["海軍 A 字裙", "a navy A-line skirt"],
+    ["米色 A 字裙", "a beige A-line skirt"],
+    ["黑色迷你裙", "a black mini skirt"],
+    ["海軍迷你裙", "a navy mini skirt"],
+    ["寬褲", "beige wide-leg trousers"],
+  ]},
+  { key: "shoes", title: "鞋子", items: [
+    ["不指定", ""],
+    ["黑色高跟鞋", "black pointed high heels"],
+    ["米色高跟鞋", "nude beige heels"],
+    ["白色球鞋", "white sneakers"],
+    ["樂福鞋", "brown leather loafers"],
+    ["短靴", "black ankle boots"],
+  ]},
+  { key: "mood", title: "氛圍", items: [
+    ["沉思柔和", "pensive soft expression, dreamy mood"],
+    ["平靜直視", "calm neutral expression looking straight at the camera"],
+    ["淡淡微笑", "a faint gentle smile"],
+    ["暮色憂鬱", "melancholic twilight mood, cool blue tones"],
+    ["陽光清新", "fresh sunny mood, bright airy tones"],
+    ["夜燈溫柔", "tender mood under warm night lamp light"],
+  ]},
+  { key: "ratio", title: "畫面比例", items: [
+    ["直向 3:4", "aspect ratio 3:4"],
+    ["海報 2:3", "aspect ratio 2:3"],
+    ["方圖 1:1", "aspect ratio 1:1"],
+    ["限動 9:16", "aspect ratio 9:16"],
+    ["風景 16:9", "aspect ratio 16:9"],
+    ["橫向 4:3", "aspect ratio 4:3"],
+  ]},
+];
+
+const DEFAULTS = { scene: 0, pose: 0, top: 0, bottom: 0, shoes: 0, mood: 0, ratio: 0 };
+const STORE_KEY = "zili-atelier-state";
+const SAVED_KEY = "zili-atelier-saved";
+
+let state = { ...DEFAULTS, extra: "" };
+try {
+  const raw = localStorage.getItem(STORE_KEY);
+  if (raw) state = { ...state, ...JSON.parse(raw) };
+} catch (e) {}
+
+const groupsEl = document.getElementById("groups");
+const previewEl = document.getElementById("preview");
+const extraEl = document.getElementById("extra");
+const savedListEl = document.getElementById("savedList");
+
+function renderGroups() {
+  groupsEl.innerHTML = "";
+  GROUPS.forEach(g => {
+    const box = document.createElement("div");
+    box.className = "group";
+    const h = document.createElement("h3");
+    h.textContent = g.title;
+    box.appendChild(h);
+    const chips = document.createElement("div");
+    chips.className = "chips";
+    g.items.forEach((it, i) => {
+      const b = document.createElement("button");
+      b.className = "chip" + (state[g.key] === i ? " on" : "");
+      b.textContent = it[0];
+      b.onclick = () => { state[g.key] = i; renderGroups(); update(); };
+      chips.appendChild(b);
+    });
+    box.appendChild(chips);
+    groupsEl.appendChild(box);
+  });
+}
+
+function labelOf(key) { return GROUPS.find(g => g.key === key).items[state[key]][0]; }
+function fragOf(key) { return GROUPS.find(g => g.key === key).items[state[key]][1]; }
+
+function buildPrompt() {
+  const outfit = ["wearing", fragOf("top") + ",", fragOf("bottom")]
+    .concat(fragOf("shoes") ? ["with " + fragOf("shoes")] : []).join(" ");
+  const parts = [
+    CHARACTER_LOCK,
+    outfit,
+    fragOf("scene"),
+    fragOf("pose"),
+    fragOf("mood"),
+    state.extra.trim(),
+    fragOf("ratio"),
+    NEGATIVE,
+  ].filter(Boolean);
+  return parts.join(", ");
+}
+
+function comboLabel() {
+  return ["scene", "pose", "top", "bottom", "mood"].map(labelOf).join(" · ");
+}
+
+function update() {
+  state.extra = extraEl.value;
+  previewEl.textContent = buildPrompt();
+  try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) {}
+}
+
+function toast(msg) {
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.classList.add("show");
+  setTimeout(() => t.classList.remove("show"), 1600);
+}
+
+async function copyPrompt() {
+  const text = buildPrompt();
+  try {
+    await navigator.clipboard.writeText(text);
+    toast("提示詞已複製 ✓");
+  } catch (e) {
+    const ta = document.createElement("textarea");
+    ta.value = text; document.body.appendChild(ta); ta.select();
+    document.execCommand("copy"); ta.remove();
+    toast("提示詞已複製 ✓");
+  }
+}
+
+function loadSaved() {
+  try { return JSON.parse(localStorage.getItem(SAVED_KEY) || "[]"); } catch (e) { return []; }
+}
+function storeSaved(list) {
+  try { localStorage.setItem(SAVED_KEY, JSON.stringify(list)); } catch (e) {}
+}
+function renderSaved() {
+  const list = loadSaved();
+  savedListEl.innerHTML = "";
+  if (!list.length) {
+    savedListEl.innerHTML = '<div class="empty">還沒有收藏。選好一套後按「☆ 收藏這套」。</div>';
+    return;
+  }
+  list.forEach((item, idx) => {
+    const row = document.createElement("div");
+    row.className = "saved-item";
+    const s = document.createElement("span");
+    s.textContent = item.label;
+    const use = document.createElement("button");
+    use.className = "mini"; use.textContent = "套用";
+    use.onclick = () => {
+      state = { ...state, ...item.state };
+      extraEl.value = state.extra || "";
+      renderGroups(); update(); toast("已套用");
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    };
+    const del = document.createElement("button");
+    del.className = "mini"; del.textContent = "刪除";
+    del.onclick = () => { const l = loadSaved(); l.splice(idx, 1); storeSaved(l); renderSaved(); };
+    row.append(s, use, del);
+    savedListEl.appendChild(row);
+  });
+}
+
+document.getElementById("copyBtn").onclick = copyPrompt;
+document.getElementById("randomBtn").onclick = () => {
+  GROUPS.forEach(g => { state[g.key] = Math.floor(Math.random() * g.items.length); });
+  renderGroups(); update(); toast("換一套 🎲");
+};
+document.getElementById("saveBtn").onclick = () => {
+  const list = loadSaved();
+  list.unshift({ label: comboLabel(), state: { ...state } });
+  storeSaved(list.slice(0, 30));
+  renderSaved(); toast("已收藏 ☆");
+};
+document.getElementById("resetBtn").onclick = () => {
+  state = { ...DEFAULTS, extra: "" };
+  extraEl.value = "";
+  renderGroups(); update(); toast("已回到預設");
+};
+extraEl.addEventListener("input", update);
+
+extraEl.value = state.extra || "";
+renderGroups();
+update();
+renderSaved();
+</script>
+</body>
+</html>
