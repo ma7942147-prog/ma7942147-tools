@@ -221,15 +221,25 @@
 
       <label class="fieldlabel" for="provider">API 供應商</label>
       <select id="provider">
+        <option value="proxy">Firebase 代理（推薦，Key 不放瀏覽器）</option>
         <option value="xai">xAI（Grok 圖像）</option>
         <option value="openai">OpenAI</option>
         <option value="gemini">Google Gemini</option>
         <option value="custom">自訂端點（OpenAI 相容）</option>
       </select>
 
-      <label class="fieldlabel" for="apiKey">API Key</label>
+      <div id="upstreamRow">
+        <label class="fieldlabel" for="upstream">代理背後用哪家</label>
+        <select id="upstream">
+          <option value="xai">xAI（Grok 圖像）</option>
+          <option value="openai">OpenAI</option>
+          <option value="gemini">Google Gemini</option>
+        </select>
+      </div>
+
+      <label class="fieldlabel" for="apiKey" id="keyLabel">API Key</label>
       <input type="password" id="apiKey" placeholder="貼上你的 API Key" autocomplete="off" />
-      <div class="hint">只存在這台裝置的瀏覽器 localStorage，不會上傳到 GitHub，也不會傳給第三方 —— 只會直接送到你選的 API。</div>
+      <div class="hint" id="keyHint">只存在這台裝置的瀏覽器 localStorage，不會上傳到 GitHub，也不會傳給第三方 —— 只會直接送到你選的 API。</div>
 
       <label class="fieldlabel" for="model">模型名稱</label>
       <input type="text" id="model" placeholder="grok-2-image-1212" />
@@ -257,8 +267,9 @@
         <button class="mini warn" id="clearKeyBtn">🗑 清除 API Key</button>
       </div>
       <div class="hint" style="margin-top:12px">
-        瀏覽器直接呼叫 API 可能遇到 CORS 阻擋。若生成失敗且訊息提到 CORS／Failed to fetch，
-        請改用自架代理（例如這個 repo 的 Firebase Functions），把「端點 URL」指向代理即可。
+        建議用「Firebase 代理」：真正的 API Key 存在 Firebase secret，瀏覽器只放通行碼，也不會有 CORS 問題。
+        部署方式見 <code>tools/zili-atelier/README.md</code>。
+        直連模式（xAI／OpenAI／Gemini）是給本機測試用的，若失敗訊息是 Failed to fetch，就是被 CORS 擋住了。
       </div>
     </div>
   </div>
@@ -292,6 +303,7 @@ const DEFAULT_NEG =
   "no text, no watermark, no extra fingers, keep face / hair / headband identical to the locked character";
 
 const PROVIDER_DEFAULTS = {
+  proxy:  { model: "", endpoint: "https://generateimage-<你的專案>.a.run.app" },
   xai:    { model: "grok-2-image-1212", endpoint: "https://api.x.ai/v1/images/generations" },
   openai: { model: "gpt-image-1",       endpoint: "https://api.openai.com/v1/images/generations" },
   gemini: { model: "gemini-2.5-flash-image", endpoint: "https://generativelanguage.googleapis.com/v1beta/models" },
@@ -394,8 +406,8 @@ const writeJSON = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); 
 
 let state  = { ...DEFAULTS, ...readJSON(K_STATE, {}) };
 let config = {
-  provider: "xai", apiKey: "", model: PROVIDER_DEFAULTS.xai.model,
-  endpoint: PROVIDER_DEFAULTS.xai.endpoint, dailyLimit: 10,
+  provider: "proxy", apiKey: "", upstream: "xai", model: "",
+  endpoint: PROVIDER_DEFAULTS.proxy.endpoint, dailyLimit: 10,
   lock: DEFAULT_LOCK, negative: DEFAULT_NEG,
   ...readJSON(K_CONF, {}),
 };
@@ -499,7 +511,11 @@ function renderQuota() {
 // ============ 生成 ============
 async function generate() {
   errBox.textContent = "";
-  if (!config.apiKey) { goTab("settings"); toast("請先在「設定」填 API Key"); return; }
+  if (!config.apiKey) {
+    goTab("settings");
+    toast(config.provider === "proxy" ? "請先在「設定」填通行碼" : "請先在「設定」填 API Key");
+    return;
+  }
   if (remaining() <= 0) { toast("今天的次數用完了"); return; }
 
   const prompt = buildPrompt();
@@ -530,6 +546,21 @@ async function generate() {
 
 async function callImageApi(prompt) {
   const p = config.provider;
+
+  if (p === "proxy") {
+    const r = await fetch(config.endpoint, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        token: config.apiKey, provider: config.upstream,
+        model: config.model, prompt: prompt, size: sizeOf(),
+      }),
+    });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(j.error || r.status + " " + r.statusText);
+    if (!j.dataUrl) throw new Error("代理沒有回傳圖片");
+    return j.dataUrl;
+  }
+
   if (p === "gemini") {
     const url = config.endpoint.replace(/\/$/, "") + "/" + config.model +
                 ":generateContent?key=" + encodeURIComponent(config.apiKey);
@@ -621,23 +652,37 @@ async function copyText(text) {
 }
 
 // ============ 設定頁 ============
+function syncProviderFields() {
+  const isProxy = $("provider").value === "proxy";
+  $("upstreamRow").style.display = isProxy ? "block" : "none";
+  $("keyLabel").textContent = isProxy ? "通行碼（對應 secret ZILI_ACCESS_TOKEN）" : "API Key";
+  $("apiKey").placeholder = isProxy ? "你設定的通行碼" : "貼上你的 API Key";
+  $("keyHint").textContent = isProxy
+    ? "用代理時真正的 API Key 存在 Firebase secret，瀏覽器只放這組通行碼。"
+    : "只存在這台裝置的瀏覽器 localStorage，不會上傳到 GitHub，也不會傳給第三方 —— 只會直接送到你選的 API。";
+}
+
 function fillSettings() {
   $("provider").value = config.provider;
+  $("upstream").value = config.upstream || "xai";
   $("apiKey").value = config.apiKey;
   $("model").value = config.model;
   $("endpoint").value = config.endpoint;
   $("dailyLimit").value = config.dailyLimit;
   $("lockText").value = config.lock;
   $("negText").value = config.negative;
+  syncProviderFields();
 }
 $("provider").onchange = () => {
   const d = PROVIDER_DEFAULTS[$("provider").value];
   $("model").value = d.model; $("endpoint").value = d.endpoint;
+  syncProviderFields();
 };
 $("saveSettingsBtn").onclick = () => {
   config = {
     ...config,
     provider: $("provider").value,
+    upstream: $("upstream").value,
     apiKey: $("apiKey").value.trim(),
     model: $("model").value.trim(),
     endpoint: $("endpoint").value.trim(),
