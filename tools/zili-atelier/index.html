@@ -271,10 +271,12 @@
       <div class="card-title">🧹 維護</div>
       <div class="stage-actions">
         <button class="mini" id="saveSettingsBtn">💾 儲存設定</button>
+        <button class="mini" id="testBtn">🔍 測試連線</button>
         <button class="mini" id="resetLockBtn">↺ 還原預設人設</button>
         <button class="mini" id="resetQuotaBtn">↺ 重設今日次數</button>
         <button class="mini warn" id="clearKeyBtn">🗑 清除 API Key</button>
       </div>
+      <div class="err" id="testResult"></div>
       <div class="hint" style="margin-top:12px">
         建議用「Firebase 代理」：真正的 API Key 存在 Firebase secret，瀏覽器只放通行碼，也不會有 CORS 問題。
         部署方式見 <code>tools/zili-atelier/README.md</code>。
@@ -547,10 +549,45 @@ async function generate() {
     stageEl.innerHTML = "";
     stageEl.appendChild(lockedCover);
     lockedCover.style.display = "block";
-    errBox.textContent = "生成失敗：" + (e && e.message ? e.message : e) +
-      "\n（若訊息是 Failed to fetch，多半是瀏覽器 CORS 擋住，請改用代理端點）";
+    errBox.textContent = "生成失敗：" + friendlyError(e);
   } finally {
     $("genBtn").disabled = remaining() <= 0;
+  }
+}
+
+function friendlyError(e) {
+  const msg = e && e.message ? e.message : String(e);
+  if (/Failed to fetch|NetworkError|Load failed/i.test(msg)) {
+    return "連不到生成服務。\n" +
+      "① 如果你是從 LINE、Facebook 等 App 裡面打開這個網頁，請改用 Chrome 或 Safari 開（App 內建瀏覽器會擋）\n" +
+      "② 確認手機有網路\n" +
+      "③ 到「設定」按「🔍 測試連線」可以看到更詳細的原因";
+  }
+  if (/API key not valid|API_KEY_INVALID|401|403/i.test(msg)) {
+    return "API Key 不對或沒有權限。請到「設定」重新貼一次 Key。\n原始訊息：" + msg;
+  }
+  if (/quota|billing|RESOURCE_EXHAUSTED|429/i.test(msg)) {
+    return "這組 Key 的免費額度用完了，或這個模型需要付費方案。\n原始訊息：" + msg;
+  }
+  return msg;
+}
+
+// 有些 App 內建瀏覽器會擋掉 CORS 預檢（OPTIONS）。
+// 用 text/plain 送同樣的 JSON 內容就不會觸發預檢，當作備援再試一次。
+async function postJson(url, payload, headers) {
+  try {
+    return await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...(headers || {}) },
+      body: JSON.stringify(payload),
+    });
+  } catch (e) {
+    if (headers && headers.Authorization) throw e; // 帶 Authorization 一定會預檢，沒得繞
+    return await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=UTF-8" },
+      body: JSON.stringify(payload),
+    });
   }
 }
 
@@ -558,12 +595,9 @@ async function callImageApi(prompt) {
   const p = config.provider;
 
   if (p === "proxy") {
-    const r = await fetch(config.endpoint, {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        token: config.apiKey, provider: config.upstream,
-        model: config.model, prompt: prompt, size: sizeOf(),
-      }),
+    const r = await postJson(config.endpoint, {
+      token: config.apiKey, provider: config.upstream,
+      model: config.model, prompt: prompt, size: sizeOf(),
     });
     const j = await r.json().catch(() => ({}));
     if (!r.ok) throw new Error(j.error || r.status + " " + r.statusText);
@@ -574,16 +608,17 @@ async function callImageApi(prompt) {
   if (p === "gemini") {
     const url = config.endpoint.replace(/\/$/, "") + "/" + config.model +
                 ":generateContent?key=" + encodeURIComponent(config.apiKey);
-    const r = await fetch(url, {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
-    });
+    const r = await postJson(url, { contents: [{ parts: [{ text: prompt }] }] });
     const j = await r.json();
     if (!r.ok) throw new Error(j.error?.message || r.status + " " + r.statusText);
     const parts = j.candidates?.[0]?.content?.parts || [];
     const img = parts.find(x => x.inlineData || x.inline_data);
     const inline = img && (img.inlineData || img.inline_data);
-    if (!inline) throw new Error("回應裡沒有圖片");
+    if (!inline) {
+      const said = parts.map((x) => x.text).filter(Boolean).join(" ").trim();
+      const why = j.candidates?.[0]?.finishReason;
+      throw new Error("這次沒有回傳圖片" + (why ? "（" + why + "）" : "") + (said ? "：" + said : "，換個搭配或稍後再試"));
+    }
     return "data:" + (inline.mimeType || inline.mime_type || "image/png") + ";base64," + inline.data;
   }
 
@@ -705,6 +740,38 @@ $("saveSettingsBtn").onclick = () => {
 $("resetLockBtn").onclick = () => { $("lockText").value = DEFAULT_LOCK; $("negText").value = DEFAULT_NEG; toast("已還原預設人設，記得按儲存"); };
 $("resetQuotaBtn").onclick = () => { writeJSON(K_QUOTA, { date: todayKey(), used: 0 }); renderQuota(); toast("今日次數已重設"); };
 $("clearKeyBtn").onclick = () => { config.apiKey = ""; writeJSON(K_CONF, config); $("apiKey").value = ""; toast("API Key 已清除"); };
+$("testBtn").onclick = async () => {
+  const box = $("testResult");
+  box.style.color = "#8d8880";
+  box.textContent = "測試中…";
+  const key = $("apiKey").value.trim();
+  if (!key) { box.style.color = "#ff9c8a"; box.textContent = "請先填 API Key 再測試。"; return; }
+
+  if ($("provider").value !== "gemini") {
+    box.textContent = "測試連線目前只支援 Google Gemini。其他供應商請直接按生成看錯誤訊息。";
+    return;
+  }
+  try {
+    // GET 是「簡單請求」，不會觸發 CORS 預檢 —— 能過代表網路通、Key 也對
+    const r = await fetch($("endpoint").value.trim().replace(/\/$/, "") + "?key=" + encodeURIComponent(key));
+    const j = await r.json().catch(() => ({}));
+    if (r.ok) {
+      const names = (j.models || []).map((m) => m.name.replace("models/", ""));
+      const hasImage = names.some((n) => n.includes("image"));
+      box.style.color = hasImage ? "#a8d97a" : "#e8c46a";
+      box.textContent = "✓ 網路和 API Key 都正常，可用模型 " + names.length + " 個。" +
+        (hasImage ? "\n其中有圖像模型，可以直接生圖。"
+                  : "\n但這組 Key 看不到圖像模型，可能要換模型或開通付費方案。");
+    } else {
+      box.style.color = "#ff9c8a";
+      box.textContent = "✗ " + friendlyError(new Error(j.error?.message || r.status + " " + r.statusText));
+    }
+  } catch (e) {
+    box.style.color = "#ff9c8a";
+    box.textContent = "✗ " + friendlyError(e);
+  }
+};
+
 $("clearAlbumBtn").onclick = async () => { await dbClear(); renderAlbum(); toast("相簿已清空"); };
 
 // ============ 按鈕 ============
