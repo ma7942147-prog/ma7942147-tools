@@ -65,7 +65,7 @@ def render_shot(i, shot):
     path = os.path.join(SHOTDIR, f"shot{i:02d}.mp4")
     if os.path.exists(path):
         return path
-    common = ["-r", str(T.FPS), "-c:v", "libx264", "-preset", "medium",
+    common = ["-r", str(T.FPS), "-c:v", "libx264", "-preset", "fast",
               "-crf", CRF, "-pix_fmt", "yuv420p", "-an", "-threads", "2", path]
 
     if src.endswith(".mp4"):
@@ -85,24 +85,46 @@ def render_shot(i, shot):
     return path
 
 
-def concat_shots(paths):
-    master = os.path.join(BUILD, "master.mp4")
-    inputs = []
-    for p in paths:
-        inputs += ["-i", p]
-    parts = []
-    cur = "0:v"
-    for k in range(1, len(paths)):
-        off = T.SHOTS[k][0]                 # 轉場起點 = 分鏡邊界（絕對時間）
+def _xfade_chain(inputs, offsets, dst):
+    """把一串片段用 xfade 接起來；offsets 是相對於第一段開頭的絕對時間。"""
+    args = []
+    for p in inputs:
+        args += ["-i", p]
+    parts, cur = [], "0:v"
+    for k in range(1, len(inputs)):
         lab = f"x{k}"
         parts.append(f"[{cur}][{k}:v]xfade=transition=fade:"
-                     f"duration={T.XFADE}:offset={off:.3f}[{lab}]")
+                     f"duration={T.XFADE}:offset={offsets[k]:.3f}[{lab}]")
         cur = lab
-    fg = ";".join(parts)
-    run(["ffmpeg", "-y", "-v", "error", *inputs, "-filter_complex", fg,
-         "-map", f"[{cur}]", "-r", str(T.FPS), "-c:v", "libx264",
-         "-preset", "medium", "-crf", CRF, "-pix_fmt", "yuv420p", "-an", master])
-    return master
+    if parts:
+        run(["ffmpeg", "-y", "-v", "error", *args, "-filter_complex", ";".join(parts),
+             "-map", f"[{cur}]", "-r", str(T.FPS), "-c:v", "libx264",
+             "-preset", "fast", "-crf", CRF, "-pix_fmt", "yuv420p", "-an", dst])
+    else:
+        run(["ffmpeg", "-y", "-v", "error", "-i", inputs[0], "-c", "copy", dst])
+    return dst
+
+
+def concat_shots(paths, group=10):
+    """分批串接。一次餵 49 個輸入給 ffmpeg 太重，先每 group 個接成一段，
+    再把各段接起來。轉場起點都是絕對時間，所以兩層用同一套算法。"""
+    starts = [s[0] for s in T.SHOTS]
+    parts, part_starts = [], []
+    for g0 in range(0, len(paths), group):
+        chunk = paths[g0:g0 + group]
+        base = starts[g0]
+        offs = [starts[g0 + i] - base for i in range(len(chunk))]
+        dst = os.path.join(BUILD, f"part{g0 // group:02d}.mp4")
+        print(f"    part {g0 // group}: shots {g0}-{g0 + len(chunk) - 1}", flush=True)
+        parts.append(_xfade_chain(chunk, offs, dst))
+        part_starts.append(base)
+    master = os.path.join(BUILD, "master.mp4")
+    if len(parts) == 1:
+        os.replace(parts[0], master)
+        return master
+    print("    joining parts ...", flush=True)
+    offs = [t - part_starts[0] for t in part_starts]
+    return _xfade_chain(parts, offs, master)
 
 
 def finish(master):
