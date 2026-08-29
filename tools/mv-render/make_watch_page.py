@@ -75,7 +75,7 @@ PAGE = """<title>The One and Only</title>
 
   <dl class="facts">
     <dt>長度</dt><dd>4 分 32 秒</dd>
-    <dt>畫面</dt><dd>7 張圖 + 1 段影片，24 個鏡頭，0.7 秒交叉淡入</dd>
+    <dt>畫面</dt><dd>19 張圖 + 1 段影片，49 個鏡頭，0.7 秒交叉淡入</dd>
     <dt>歌詞對時</dt><dd>手動打點兩次取平均；45 句中 44 句兩次誤差在 1 秒內</dd>
     <dt>尚未驗證</dt><dd>最後 15 秒的 Final Chorus 用的是自動偵測值</dd>
   </dl>
