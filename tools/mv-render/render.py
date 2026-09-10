@@ -142,18 +142,22 @@ def concat_shots(paths, group=10):
     return _xfade_chain(parts, offs, master)
 
 
-def finish(master):
-    ass = os.path.join(BUILD, "lyrics.ass").replace(":", r"\:")
-    vf = (f"subtitles='{ass}':fontsdir=/usr/share/fonts,"
-          f"fade=t=in:st=0:d=1.5,fade=t=out:st=271.4:d=1.24")
+def finish(master, burn_subs=True, crf="18", suffix=""):
+    """混入音檔輸出成品。burn_subs=False 就不燒字幕（改用外掛字軌）。"""
+    dur = T.SHOTS[-1][1]
+    vf = f"fade=t=in:st=0:d=1.5,fade=t=out:st={dur - 1.24:.2f}:d=1.24"
+    if burn_subs:
+        ass = os.path.join(BUILD, "lyrics.ass").replace(":", r"\:")
+        vf = f"subtitles='{ass}':fontsdir=/usr/share/fonts," + vf
+    out = os.path.join(BUILD, f"MV_{project.NAME}{suffix}.mp4")
     run(["ffmpeg", "-y", "-v", "error", "-i", master, "-i", AUDIO,
          "-vf", vf, "-map", "0:v", "-map", "1:a",
-         "-c:v", "libx264", "-preset", "slow", "-crf", "18",
+         "-c:v", "libx264", "-preset", "slow", "-crf", crf,
          "-pix_fmt", "yuv420p", "-profile:v", "high", "-level", "4.1",
          "-movflags", "+faststart",
          "-c:a", "aac", "-b:a", "256k", "-ar", "48000",
-         "-shortest", OUT])
-    return OUT
+         "-shortest", out])
+    return out
 
 
 if __name__ == "__main__":

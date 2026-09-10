@@ -1,5 +1,9 @@
 # -*- coding: utf-8 -*-
-"""產生 ASS 字幕檔（含主歌詞、片頭字卡、片尾字卡）。"""
+"""產生字幕檔。
+
+ASS：燒進影片用（含片頭／片尾字卡、淡入淡出、字型設定）。
+SRT：外掛字軌用（YouTube 上傳），只有歌詞本身，不含字卡與樣式。
+"""
 import project
 
 T = project.timeline()
@@ -71,3 +75,35 @@ if __name__ == "__main__":
     import os
     os.makedirs(project.BUILD, exist_ok=True)
     main()
+
+
+def srt_ts(sec):
+    if sec < 0:
+        sec = 0
+    h = int(sec // 3600); sec -= h * 3600
+    m = int(sec // 60);   sec -= m * 60
+    s = int(sec)
+    ms = int(round((sec - s) * 1000))
+    if ms == 1000:
+        ms = 0; s += 1
+    return f"{h:02d}:{m:02d}:{s:02d},{ms:03d}"
+
+
+def write_srt(path=None, min_dur=1.2):
+    """輸出 SRT 字軌（YouTube 用）。
+
+    只有歌詞，不含片頭／片尾字卡——那些是影片設計的一部分，
+    外掛字軌不該重複顯示。太短的句子會補到 min_dur 以免一閃而過，
+    但絕不會蓋到下一句。
+    """
+    import os as _os
+    path = path or _os.path.join(project.BUILD, "lyrics.srt")
+    lines = T.build_lines()
+    with open(path, "w", encoding="utf-8") as f:
+        for i, (s, e, text) in enumerate(lines):
+            nxt = lines[i + 1][0] if i + 1 < len(lines) else e + min_dur
+            if e - s < min_dur:
+                e = min(s + min_dur, nxt - 0.05)
+            f.write(f"{i + 1}\n{srt_ts(s)} --> {srt_ts(e)}\n{text}\n\n")
+    print(f"wrote {path}  ({len(lines)} 句)")
+    return path

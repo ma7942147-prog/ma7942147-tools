@@ -87,6 +87,30 @@ python3 verify_sync.py
 
 唯一那句在連續演唱區間內，偵測器抓到的是前一句的起唱點，屬量測假象。
 
+## 字幕：燒錄 vs 外掛字軌
+
+```bash
+MV_PROJECT=moon python3 make_subs.py                    # build/lyrics.ass（燒錄用）
+MV_PROJECT=moon python3 -c "import make_subs;make_subs.write_srt()"   # build/lyrics.srt（YouTube 用）
+```
+
+`render.py` 預設會把 ASS 燒進畫面。要出無字幕版（上 YouTube 時用外掛字軌
+比較好，觀眾可以自己開關、也能被搜尋到）：
+
+```python
+import render
+render.finish(render.BUILD + "/master.mp4", burn_subs=False, crf="19",
+              suffix="_nosub_1080p")
+```
+
+`master.mp4` 是串接完、還沒燒字幕也還沒混音的中間檔，所以改字幕或
+切換燒錄與否都不用重跑分鏡。
+
+兩者的差別：
+- **ASS**：含片頭／片尾字卡、淡入淡出、字型與描邊設定，是影片設計的一部分
+- **SRT**：只有歌詞本身，不含字卡與樣式；太短的句子會補到 1.2 秒以免一閃
+  而過，但絕不會蓋到下一句
+
 ## 手動打點（最準的做法）
 
 偵測器在編曲稀疏的地方很準，但後半段人聲被吉他牆蓋住時還是會抓不到。
