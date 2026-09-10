@@ -12,14 +12,14 @@ import os
 import subprocess
 import sys
 
-import timeline as T
+import project
 
-ROOT = os.path.dirname(os.path.abspath(__file__))
-ASSETS = os.path.join(ROOT, "assets")
-BUILD = os.path.join(ROOT, "build")
+T = project.timeline()
+ASSETS = project.ASSETS
+BUILD = project.BUILD
 SHOTDIR = os.path.join(BUILD, "shots")
-AUDIO = os.path.join(ASSETS, "song.mp3")
-OUT = os.path.join(BUILD, "MV_The_One_and_Only.mp4")
+AUDIO = project.audio()
+OUT = os.path.join(BUILD, f"MV_{project.NAME}.mp4")
 
 SS = 2  # supersample 倍率：先在 2x 解析度做推軌再縮回 1080p，畫面較穩
 CW, CH = T.W * SS, T.H * SS
@@ -33,19 +33,26 @@ def run(cmd):
         raise SystemExit(f"ffmpeg failed ({p.returncode})")
 
 
-def canvas_filter(crop):
-    """裁切 → 2x 畫布（模糊背景填滿 + 原圖等比置中）。"""
+def canvas_filter(crop, w=None, h=None, out="cv"):
+    """裁切 → 畫布（模糊背景填滿 + 原片等比置中）。
+
+    直式素材放進橫式畫面時，兩側用自己的放大模糊版填滿，
+    比裁掉上下或留黑邊都好看。
+    """
+    w = w or CW
+    h = h or CH
     pre = ""
     if crop and crop != (0.0, 0.0, 1.0, 1.0):
-        x, y, w, h = crop
-        pre = f"crop=iw*{w}:ih*{h}:iw*{x}:ih*{y},"
+        x, y, cw, ch = crop
+        pre = f"crop=iw*{cw}:ih*{ch}:iw*{x}:ih*{y},"
+    blur = max(8, int(48 * w / CW))
     return (
         f"[0:v]{pre}split=2[a][b];"
-        f"[a]scale={CW}:{CH}:force_original_aspect_ratio=increase,"
-        f"crop={CW}:{CH},boxblur=luma_radius=48:luma_power=2,"
+        f"[a]scale={w}:{h}:force_original_aspect_ratio=increase,"
+        f"crop={w}:{h},boxblur=luma_radius={blur}:luma_power=2,"
         f"eq=brightness=-0.09:saturation=0.75[bg];"
-        f"[b]scale={CW}:{CH}:force_original_aspect_ratio=decrease[fg];"
-        f"[bg][fg]overlay=(W-w)/2:(H-h)/2[cv]"
+        f"[b]scale={w}:{h}:force_original_aspect_ratio=decrease[fg];"
+        f"[bg][fg]overlay=(W-w)/2:(H-h)/2[{out}]"
     )
 
 
@@ -70,11 +77,19 @@ def render_shot(i, shot):
 
     if src.endswith(".mp4"):
         trim = crop[0]
-        vf = (f"scale={T.W}:{T.H}:force_original_aspect_ratio=increase,"
-              f"crop={T.W}:{T.H},setsar=1,fps={T.FPS},"
-              f"eq=saturation=1.05:contrast=1.03")
-        run(["ffmpeg", "-y", "-v", "error", "-ss", f"{trim:.3f}", "-t", f"{dur:.3f}",
-             "-i", os.path.join(ASSETS, src), "-vf", vf, *common])
+        fill = crop[1] if len(crop) > 1 else "blur"
+        if fill == "crop":            # 素材比例接近畫面，直接放大裁切
+            vf = (f"scale={T.W}:{T.H}:force_original_aspect_ratio=increase,"
+                  f"crop={T.W}:{T.H},setsar=1,fps={T.FPS},"
+                  f"eq=saturation=1.05:contrast=1.03")
+            run(["ffmpeg", "-y", "-v", "error", "-ss", f"{trim:.3f}", "-t", f"{dur:.3f}",
+                 "-i", os.path.join(ASSETS, src), "-vf", vf, *common])
+        else:                          # 直式素材：模糊背景填滿 + 原片置中
+            fc = (canvas_filter(None, T.W, T.H, "cv") +
+                  f";[cv]fps={T.FPS},setsar=1,eq=saturation=1.05:contrast=1.03[v]")
+            run(["ffmpeg", "-y", "-v", "error", "-ss", f"{trim:.3f}", "-t", f"{dur:.3f}",
+                 "-i", os.path.join(ASSETS, src),
+                 "-filter_complex", fc, "-map", "[v]", *common])
     else:
         nf = int(round(dur * T.FPS))
         vf = canvas_filter(crop) + ";[cv]fps=%d,%s,setsar=1[v]" % (

@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 """產生 ASS 字幕檔（含主歌詞、片頭字卡、片尾字卡）。"""
-import timeline as T
+import project
+
+T = project.timeline()
 
 
 def ts(sec):
@@ -37,7 +39,8 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 FADE = r"{\fad(150,220)}"
 
 
-def main(path="build/lyrics.ass"):
+def main(path=None):
+    path = path or __import__("os").path.join(project.BUILD, "lyrics.ass")
     ev = []
 
     # 片頭字卡
@@ -49,10 +52,12 @@ def main(path="build/lyrics.ass"):
     for s, e, text in T.build_lines():
         ev.append((s, e, "Lyric", FADE + text))
 
-    # 片尾字卡
-    os_, oe, olines = T.OUTRO_CARD
-    ev.append((os_, oe, "Outro",
-               r"{\fad(700,1200)\pos(960,540)}" + r"\N".join(olines)))
+    # 片尾字卡（沒有就跳過）
+    card = getattr(T, "OUTRO_CARD", None)
+    if card:
+        os_, oe, olines = card
+        ev.append((os_, oe, "Outro",
+                   r"{\fad(700,1200)\pos(960,540)}" + r"\N".join(olines)))
 
     ev.sort(key=lambda x: x[0])
     with open(path, "w", encoding="utf-8") as f:
@@ -64,5 +69,5 @@ def main(path="build/lyrics.ass"):
 
 if __name__ == "__main__":
     import os
-    os.makedirs("build", exist_ok=True)
+    os.makedirs(project.BUILD, exist_ok=True)
     main()

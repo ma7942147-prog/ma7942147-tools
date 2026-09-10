@@ -9,9 +9,11 @@ import base64
 import os
 import sys
 
+import project
+
 ROOT = os.path.dirname(os.path.abspath(__file__))
 
-PAGE = """<title>The One and Only</title>
+PAGE = """<title>__TITLE__</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet"
       href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;1,400&display=swap">
@@ -60,8 +62,8 @@ PAGE = """<title>The One and Only</title>
 
 <div class="wrap">
   <header>
-    <h1>The One and Only</h1>
-    <p class="sub">1993 · 中壢 · 月亮很圓</p>
+    <h1>__TITLE__</h1>
+    <p class="sub">__SUB__</p>
   </header>
 
   <video id="v" controls playsinline preload="auto"></video>
@@ -70,15 +72,9 @@ PAGE = """<title>The One and Only</title>
     <button id="dl">下載 MV</button>
     <button class="ghost" id="cc">下載字幕時間碼</button>
   </div>
-  <p class="note" id="msg">這一頁的影片是 960×540 壓縮版（11.5 MB）——
-    網頁最多只能放 16 MB。完整 1080p 版本 105 MB，得在本機重跑 render.py 產生。</p>
+  <p class="note" id="msg">__NOTE__</p>
 
-  <dl class="facts">
-    <dt>長度</dt><dd>4 分 32 秒</dd>
-    <dt>畫面</dt><dd>19 張圖 + 1 段影片，49 個鏡頭，0.7 秒交叉淡入</dd>
-    <dt>歌詞對時</dt><dd>手動打點兩次取平均；45 句中 44 句兩次誤差在 1 秒內</dd>
-    <dt>尚未驗證</dt><dd>最後 15 秒的 Final Chorus 用的是自動偵測值</dd>
-  </dl>
+  <dl class="facts">__FACTS__</dl>
 </div>
 
 <script type="application/base64" id="mp4">__SRC__</script>
@@ -103,7 +99,7 @@ dl.onclick = async () => {
   if(!downloads) return;
   dl.disabled = true; dl.textContent = '準備中…';
   try{
-    await downloads.save({filename:'The_One_and_Only_MV.mp4', data: VID.slice(0)});
+    await downloads.save({filename:'__FILENAME__', data: VID.slice(0)});
     dl.textContent = '已儲存 ✓';
   }catch(e){
     dl.disabled = false; dl.textContent = '下載 MV';
@@ -128,17 +124,24 @@ document.getElementById('cc').onclick = async () => {
 """
 
 
-def build(video, ass, dst):
+def build(video, ass, dst, title="MV", sub="", facts=(), note="", download=False):
     b64 = base64.b64encode(open(video, "rb").read()).decode()
     html = PAGE.replace("__SRC__", b64)
     html = html.replace("__ASS__", __import__("json").dumps(
         open(ass, encoding="utf-8").read()))
+    html = html.replace("__TITLE__", title).replace("__SUB__", sub)
+    html = html.replace("__NOTE__", note)
+    html = html.replace("__FILENAME__", f"{project.NAME}_MV.mp4")
+    html = html.replace("__FACTS__", "".join(
+        f"<dt>{k}</dt><dd>{v}</dd>" for k, v in facts))
     open(dst, "w", encoding="utf-8").write(html)
     mb = os.path.getsize(dst) / 1e6
     print(f"wrote {dst}  ({mb:.2f} MB)" + ("  ⚠ 超過 16 MB" if mb > 16 else "  OK"))
 
 
 if __name__ == "__main__":
-    build(os.path.join(ROOT, "build", "MV_web.mp4"),
-          os.path.join(ROOT, "build", "lyrics.ass"),
-          sys.argv[1] if len(sys.argv) > 1 else os.path.join(ROOT, "build", "watch.html"))
+    build(os.path.join(project.BUILD, "MV_web.mp4"),
+          os.path.join(project.BUILD, "lyrics.ass"),
+          [a for a in sys.argv[1:] if not a.startswith("-")][0]
+          if [a for a in sys.argv[1:] if not a.startswith("-")]
+          else os.path.join(project.BUILD, "watch.html"))

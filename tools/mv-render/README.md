@@ -1,7 +1,32 @@
 # mv-render — 歌詞 MV 合成器
 
-把「一首歌 + 幾張圖 / 短影片 + 一份歌詞」合成一支 1080p 的歌詞 MV。
-第一支作品：**《The One and Only》**（1993 中壢、野狼、中山北路）。
+把「一首歌 + 圖片／影片 + 一份歌詞」合成一支 1080p 的歌詞 MV。
+
+## 專案
+
+素材與時間軸放在 `projects/<名稱>/`，引擎共用。所有指令都吃 `--project`
+（或環境變數 `MV_PROJECT`），預設 `one_and_only`。
+
+| 專案 | 內容 |
+|---|---|
+| `one_and_only` | 《The One and Only》4:32，19 張圖 + 1 段影片，49 個鏡頭 |
+| `moon` | 《月娘圓》3:12，10 段直式影片，30 個鏡頭 |
+
+```
+projects/<名稱>/
+  timeline.py      段落時間、歌詞時間碼、分鏡
+  assets/          song.mp3 或 song.flac + 圖片／影片
+  build/           產出（不進 repo）
+  tap_times.json   手動打點結果（可選，存在時優先於偵測值）
+```
+
+```bash
+MV_PROJECT=moon python3 render.py        # 或 python3 render.py --project moon
+MV_PROJECT=moon python3 verify_sync.py
+```
+
+直式素材（例如 720×1280）放進 1920×1080 時，用「自己的放大模糊版填滿
+兩側 + 原片等比置中」，不裁掉上下也不留黑邊。圖片和影片走同一套。
 
 ## 為什麼要自己算時間軸
 

@@ -12,10 +12,12 @@ import json
 import os
 import sys
 
-import timeline as T
+import project
+
+T = project.timeline()
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
-AUDIO = os.path.join(ROOT, "assets", "song.mp3")
+AUDIO = project.audio()
 TEMPLATE = os.path.join(ROOT, "tap_ui.html")
 
 
@@ -27,7 +29,7 @@ DL_SCRIPT = """document.getElementById('dl').onclick = () => {
 };"""
 
 
-def build(dst=os.path.join(ROOT, "build", "tap.html"), embed=True, download=True):
+def build(dst=os.path.join(project.BUILD, "tap.html"), embed=True, download=True):
     """embed=True 會把 mp3 以 base64 內嵌，產出的單一 HTML 到哪都能開。
 
     download=False 用於發佈成 Artifact：那個檢視器不給網頁下載檔案，
@@ -36,7 +38,7 @@ def build(dst=os.path.join(ROOT, "build", "tap.html"), embed=True, download=True
     secs = T.section_onsets()
     start_at = sum(len(l) for _, _, _, l in secs[:6])   # Bridge 第一句
     data = {
-        "id": "one_and_only",
+        "id": project.NAME,
         "rev": 2,
         "startAt": start_at,
         "outro": list(T.OUTRO_CARD[:2]),
@@ -48,8 +50,9 @@ def build(dst=os.path.join(ROOT, "build", "tap.html"), embed=True, download=True
     }
     html = open(TEMPLATE, encoding="utf-8").read()
     if embed:
+        mime = "audio/flac" if AUDIO.endswith(".flac") else "audio/mpeg"
         b64 = base64.b64encode(open(AUDIO, "rb").read()).decode()
-        src = "data:audio/mpeg;base64," + b64
+        src = b64
     else:
         src = os.path.basename(AUDIO)
     html = html.replace("__DATA__", json.dumps(data, ensure_ascii=False))

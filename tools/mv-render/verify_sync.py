@@ -12,13 +12,16 @@ import sys
 
 import numpy as np
 
-import timeline as T
+import project
+
+T = project.timeline()
 
 SR, N, H = 22050, 2048, 256
 FPS = SR / H
 
 
-def modulation_envelope(path="assets/song.mp3"):
+def modulation_envelope(path=None):
+    path = path or project.audio()
     raw = subprocess.run(["ffmpeg", "-v", "error", "-i", path, "-ac", "2",
                           "-ar", str(SR), "-f", "f32le", "-"],
                          capture_output=True).stdout
