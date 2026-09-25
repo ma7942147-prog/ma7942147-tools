@@ -21,6 +21,7 @@
 - **zili-atelier**：紫璃工坊 —— 固定角色模板的服裝／場景生圖器（單檔 HTML + Firebase 代理），部署見 `tools/zili-atelier/README.md`
 - **首頁 `index.html`**：Firebase Hosting 的工具總覽入口
 - **telegram-notifier**：共用的 Telegram 通知基礎設施（`/functions` + `tools/shared/telegram-notify.js`），部署步驟見 `tools/telegram-notifier/README.md`；bot 是 @ma7942147_bot
+- **photo-slideshow**：把一組照片做成有轉場、標題卡、字幕的幻燈片影片（Python + ffmpeg CLI 工具），設定檔驅動、可重複套用在不同展覽/活動，用法見 `tools/photo-slideshow/README.md`
 
 ## 工作注意事項
 - 個人資料一律去識別化

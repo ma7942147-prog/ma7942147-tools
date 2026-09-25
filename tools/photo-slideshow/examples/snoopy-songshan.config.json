@@ -1,0 +1,44 @@
+{
+  "output": "output/snoopy_songshan.mp4",
+  "canvas": { "width": 1080, "height": 1350, "fps": 25 },
+  "image_duration": 3.0,
+  "xfade_duration": 0.6,
+  "font": "Noto Sans CJK TC",
+  "caption": "How do you do? SNOOPY・台北松菸文創",
+  "images": [
+    "photos/01-entrance.jpg",
+    "photos/02-hall.jpg",
+    "photos/03-painting-kiss.jpg",
+    "photos/04-painting-soda.jpg",
+    "photos/05-painting-bw.jpg",
+    "photos/06-painting-collage1.jpg",
+    "photos/07-painting-collage2.jpg",
+    "photos/08-poster-doggie-dreams.jpg",
+    "photos/09-poster-a-break.jpg",
+    "photos/10-poster-happy-party.jpg",
+    "photos/11-figure-yellow.jpg",
+    "photos/12-plush-pair.jpg",
+    "photos/13-figures-duck.jpg",
+    "photos/14-figure-case.jpg",
+    "photos/15-cutout-bw.jpg",
+    "photos/16-giant-inflatable.jpg"
+  ],
+  "title_card": {
+    "background": "photos/01-entrance.jpg",
+    "duration": 3.2,
+    "dim": 0.45,
+    "lines": ["How do you do?", "SNOOPY", "走進史努比的藝術人生．快閃小巡迴 台北站", "松山文創園區"],
+    "sizes": [90, 130, 42, 34],
+    "colors": ["white", "0xF6C945", "white", "0xCCCCCC"],
+    "y": ["h*0.30", "h*0.30+110", "h*0.30+270", "h*0.30+330"]
+  },
+  "end_card": {
+    "background": "photos/16-giant-inflatable.jpg",
+    "duration": 3.6,
+    "dim": 0.5,
+    "lines": ["How do you do? SNOOPY", "快閃小巡迴 台北站", "松山文創園區｜2026.09.25"],
+    "sizes": [64, 40, 30],
+    "colors": ["white", "0xF6C945", "0xCCCCCC"],
+    "y": ["h*0.42", "h*0.42+90", "h*0.42+150"]
+  }
+}

@@ -1,0 +1,31 @@
+{
+  "output": "output/slideshow.mp4",
+  "canvas": { "width": 1080, "height": 1350, "fps": 25 },
+  "image_duration": 3.0,
+  "xfade_duration": 0.6,
+  "font": "Noto Sans CJK TC",
+  "caption": "活動名稱・地點",
+  "images": [
+    "photos/01.jpg",
+    "photos/02.jpg",
+    "photos/03.jpg"
+  ],
+  "title_card": {
+    "background": "photos/01.jpg",
+    "duration": 3.2,
+    "dim": 0.45,
+    "lines": ["主標題", "副標題", "地點／日期"],
+    "sizes": [90, 42, 30],
+    "colors": ["white", "white", "0xCCCCCC"],
+    "y": ["h*0.35", "h*0.35+110", "h*0.35+170"]
+  },
+  "end_card": {
+    "background": "photos/03.jpg",
+    "duration": 3.6,
+    "dim": 0.5,
+    "lines": ["主標題", "地點｜日期"],
+    "sizes": [64, 30],
+    "colors": ["white", "0xCCCCCC"],
+    "y": ["h*0.42", "h*0.42+90"]
+  }
+}
