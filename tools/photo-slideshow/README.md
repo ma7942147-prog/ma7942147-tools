@@ -35,6 +35,7 @@ sudo apt-get install -y ffmpeg fonts-noto-cjk
 | `images` | 照片路徑陣列，依此順序播放 | 必填 |
 | `title_card` | 選填，開場字卡（見下） | 無 |
 | `end_card` | 選填，結尾字卡，格式同 `title_card` | 無 |
+| `audio` | 選填，配樂（見下） | 無 |
 
 `title_card` / `end_card` 欄位：
 
@@ -50,15 +51,40 @@ sudo apt-get install -y ffmpeg fonts-noto-cjk
 
 照片不論直式橫式都會「置中滿版＋背景模糊放大填滿」，不會出現黑邊。
 
+`audio` 欄位：
+
+| 欄位 | 說明 | 預設 |
+|---|---|---|
+| `file` | 配樂檔路徑（wav/mp3 都可） | 必填（給這個欄位的話） |
+| `volume` | 音量倍率，1.0 是原音量 | 1.0 |
+| `fade_out` | 影片結束前淡出秒數 | 2.0 |
+
+配樂會自動裁切到跟影片一樣長，超過的部分會被切掉，不夠長會提早結束（沒有自動循環，要循環請先用 `compose_music.py` 或自己用 ffmpeg 的 `-stream_loop` 處理成剛好的長度）。
+
+## 沒有現成音樂可用時：合成一段原創配樂
+
+`compose_music.py` 用正弦波合成一段音樂盒風格的原創小旋律（不是抓網路上的音樂，也不是模仿任何卡通主題曲，純自創、沒有版權疑慮），適合展覽/活動影片墊個輕快底樂：
+
+```
+python3 compose_music.py --duration 37.4 --out music.wav
+```
+
+`--duration` 建議跟 `build_slideshow.py` 印出來的「約 N 秒」對齊，這樣配樂會剛好淡出在影片結尾。想換旋律就用 `--melody 你的旋律.json`（格式是 `[["C4", 0.5], ["D4", 0.5], ...]`，音名+拍數），或用 `--tempo` 調快慢。做好的 `music.wav` 填進設定檔的 `audio.file` 就能用。
+
+**注意**：這個工具不會、也不能幫你抓現成卡通主題曲的音檔或旋律來用——那些通常有版權。想要那種「聽起來很熟悉」的配樂，只能自己合法取得授權音樂，或像上面這樣用原創旋律代替。
+
 ## 照片不進 Git
 
 這個 repo 是公開的，所以照片本身（`photos/` 資料夾）**不要 commit 進來**，用完就留在你自己電腦或 GDrive 工作桌就好。工具資料夾裡已經用 `.gitignore` 擋掉常見的圖片格式與 `output/`。
 
-## 已知案例：史努比松菸快閃展
+## 已知案例
 
-`examples/snoopy-songshan.config.json` 是實際做過的那支影片的設定檔，記錄了敘事順序（入口 → 展場 → 5 幅畫作 → 3 張海報 → 公仔周邊 → 裝置 → 巨型充氣史努比壓軸）跟字卡文案，之後想比照這個風格剪別的展覽影片，直接複製這份改圖片路徑跟文字即可。
+- `examples/snoopy-songshan.config.json`：史努比 75 週年快閃展（松山文創園區），敘事順序是入口 → 展場 → 5 幅畫作 → 3 張海報 → 公仔周邊 → 裝置 → 巨型充氣史努比壓軸，無配樂。
+- `examples/maruko-songshan.config.json`：櫻桃小丸子小小畫家彩繪特展（松山文創園區 5 號倉庫），敘事順序是展牆全覽 → 兩位配角肖像（丸尾／穗波）→ 一連串小丸子肖像／馬戲團特寫 → 回到主視覺海報收尾，配上 `compose_music.py` 產生的原創音樂盒旋律當配樂。要重現的話記得先跑 `python3 compose_music.py --duration <影片秒數> --out music.wav`，`music.wav` 才會存在。
+
+之後想比照哪個風格剪別的展覽影片，直接複製對應那份改圖片路徑跟文字即可。
 
 ## 目前限制
 
-- 沒有配樂功能。要加音樂的話，先用這個工具產出無聲影片，再自己疊一軌，或之後有需要再回來加 `-i 音樂檔` 的參數。
 - 轉場目前只有淡入淡出一種（`xfade=fade`），夠用但不炫技；想要別的轉場效果可以改 `build_slideshow.py` 裡 `xfade=transition=fade` 那一行，ffmpeg 支援的轉場清單見 `ffmpeg -h filter=xfade`。
+- `compose_music.py` 合成的是單旋律線的音樂盒音色，適合當輕量底樂，不是完整編曲；旋律循環播放，長影片聽久了會覺得重複。

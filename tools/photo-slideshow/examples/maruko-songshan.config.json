@@ -1,0 +1,46 @@
+{
+  "output": "output/maruko_songshan.mp4",
+  "canvas": { "width": 1080, "height": 1350, "fps": 25 },
+  "image_duration": 3.0,
+  "xfade_duration": 0.6,
+  "font": "Noto Sans CJK TC",
+  "caption": "小丸子彩繪特展・松山文創園區",
+  "images": [
+    "photos/01-wall-overview.jpg",
+    "photos/02-mr-maruo.jpg",
+    "photos/03-miss-homami.jpg",
+    "photos/04-maruko-a.jpg",
+    "photos/05-maruko-circus.jpg",
+    "photos/06-maruko-b.jpg",
+    "photos/07-maruko-c.jpg",
+    "photos/08-maruko-d.jpg",
+    "photos/09-maruko-e.jpg",
+    "photos/10-maruko-f.jpg",
+    "photos/11-maruko-g.jpg",
+    "photos/12-maruko-cheer.jpg",
+    "photos/13-poster.jpg"
+  ],
+  "title_card": {
+    "background": "photos/13-poster.jpg",
+    "duration": 3.2,
+    "dim": 0.35,
+    "lines": ["櫻桃小丸子", "小小畫家彩繪特展", "松山文創園區 5號倉庫｜2026.06.18—09.28"],
+    "sizes": [110, 46, 32],
+    "colors": ["0xFFB6C1", "white", "0xCCCCCC"],
+    "y": ["h*0.62", "h*0.62+130", "h*0.62+195"]
+  },
+  "end_card": {
+    "background": "photos/12-maruko-cheer.jpg",
+    "duration": 3.6,
+    "dim": 0.5,
+    "lines": ["櫻桃小丸子 小小畫家彩繪特展", "松山文創園區 5號倉庫", "2026.06.18—09.28"],
+    "sizes": [56, 38, 28],
+    "colors": ["white", "0xFFB6C1", "0xCCCCCC"],
+    "y": ["h*0.42", "h*0.42+80", "h*0.42+135"]
+  },
+  "audio": {
+    "file": "music.wav",
+    "volume": 1.0,
+    "fade_out": 2.5
+  }
+}

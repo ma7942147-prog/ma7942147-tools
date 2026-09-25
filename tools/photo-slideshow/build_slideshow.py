@@ -172,17 +172,43 @@ def build(config_path, output_override=None):
             filter_complex = ";".join(filter_parts + xfade_parts)
             final_label = "vout"
 
-        cmd = [
-            "ffmpeg", "-y", *inputs,
-            "-filter_complex", filter_complex,
-            "-map", f"[{final_label}]",
-            "-r", str(fps),
-            "-c:v", "libx264", "-pix_fmt", "yuv420p", "-crf", "18", "-preset", "medium",
-            output,
-        ]
+        total = sum(durs) - xfade * (len(durs) - 1) if len(durs) > 1 else durs[0]
+
+        audio = cfg.get("audio")
+        cmd = ["ffmpeg", "-y", *inputs]
+        if audio:
+            audio_file = resolve(base_dir, audio["file"])
+            if not os.path.isfile(audio_file):
+                die(f"找不到配樂檔案：{audio_file}")
+            vol = audio.get("volume", 1.0)
+            fade_out = audio.get("fade_out", 2.0)
+            audio_idx = len(clips)
+            cmd += ["-i", audio_file]
+            fade_start = max(total - fade_out, 0)
+            audio_filter = (
+                f"[{audio_idx}:a]atrim=0:{total:.3f},asetpts=PTS-STARTPTS,"
+                f"afade=t=out:st={fade_start:.3f}:d={fade_out:.3f},volume={vol}[aout]"
+            )
+            filter_complex = filter_complex + ";" + audio_filter
+            cmd += [
+                "-filter_complex", filter_complex,
+                "-map", f"[{final_label}]", "-map", "[aout]",
+                "-r", str(fps),
+                "-c:v", "libx264", "-pix_fmt", "yuv420p", "-crf", "18", "-preset", "medium",
+                "-c:a", "aac", "-b:a", "192k",
+                "-shortest",
+                output,
+            ]
+        else:
+            cmd += [
+                "-filter_complex", filter_complex,
+                "-map", f"[{final_label}]",
+                "-r", str(fps),
+                "-c:v", "libx264", "-pix_fmt", "yuv420p", "-crf", "18", "-preset", "medium",
+                output,
+            ]
         run(cmd)
 
-    total = sum(durs) - xfade * (len(durs) - 1) if len(durs) > 1 else durs[0]
     print(f"完成：{output}（約 {total:.1f} 秒）")
 
 
