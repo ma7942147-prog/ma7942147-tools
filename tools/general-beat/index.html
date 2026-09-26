@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>將軍節拍</title>
+<title>角色節拍</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Noto+Sans+TC:wght@900&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
@@ -35,6 +35,7 @@
 <div id="bar">
   <button id="bPlay">⏸ 暫停</button>
   <button id="bSound">🔇 音效</button>
+  <button id="bCast">👤 換角色</button>
   <button id="bRec">⏺ 錄製一輪</button>
   <span id="msg">空白鍵：播放／暫停</span>
   <div id="chips"></div>
@@ -43,6 +44,7 @@
 
 <script>
 // ───────────── 基本設定 ─────────────
+const DEFAULT_CAST = 'general';
 const cv = document.getElementById('c'), ctx = cv.getContext('2d');
 const W = 1920, H = 1080, BPM = 120, SPB = 60 / BPM, PI = Math.PI;
 const F_EN = '"Archivo Black", "Arial Black", sans-serif';
@@ -61,10 +63,19 @@ const pulse = (lb, k = 6) => Math.exp(-(((lb % 1) + 1) % 1) * k);   // 每拍一
 const rnd = i => { const x = Math.sin(i * 127.1 + 311.7) * 43758.5453; return x - Math.floor(x); };
 
 // ───────────── 角色素材：原圖 + 三色殘影 ─────────────
-const img = new Image();
-img.src = 'general.webp';
-const tint = {};
+// 角色表：換角色只要加一筆（圖 + 身高比例 + 各場景用字）
+const CAST = {
+  general: { src: 'general.webp', hs: 1, medalH: 820, blue: '#3446f0', blue2: '#4658ff',
+    title: '將軍節拍', hud: 'GENERAL / BEAT', big: '節奏', sub: '戰鼓，響起。', outline: 'WARRIOR', motto: '威風，動起來。',
+    blocks: ['GENERAL', '將軍', '出陣', '威風'], stripe: '出陣', finale: '出陣！' },
+  zili: { src: 'zili.webp', hs: 1.25, medalH: 800, blue: '#5a3df0', blue2: '#6a4fff',
+    title: '紫璃節拍', hud: 'ZILI / BEAT', big: '紫璃', sub: '翻開，下一頁。', outline: 'DANCE', motto: '書香，動起來。',
+    blocks: ['ZILI', '紫璃', '閱讀', '心動'], stripe: '紫璃', finale: '出發！' },
+};
+for (const k in CAST) { CAST[k].img = new Image(); CAST[k].img.src = CAST[k].src; }
+let K = CAST[location.hash.slice(1)] || CAST[DEFAULT_CAST], img, tint = {};
 function makeTints() {
+  img = K.img; C.blue = K.blue; C.blue2 = K.blue2; tint = {};
   for (const [k, col] of Object.entries({ pink: C.pink, cyan: C.cyan, yellow: C.yellow })) {
     const t = document.createElement('canvas'); t.width = img.width; t.height = img.height;
     const g = t.getContext('2d'); g.drawImage(img, 0, 0);
@@ -83,7 +94,7 @@ const dotPat = (() => {
 // 角色：把圖切成水平細條，越往上位移越大 → 做出「從腰部擺動」的扭動感
 function drawChar(src, p) {
   const iw = src.width, ih = src.height, sq = p.sq || 0;
-  const h = p.h * (1 + sq), w = p.h * iw / ih * (1 - sq * .6), N = 40;
+  const h = p.h * (1 + sq), w = p.h * iw / ih * (1 - sq * .6), N = Math.max(40, Math.round(h / 10));
   ctx.save();
   ctx.translate(p.x, p.y); ctx.rotate(p.rot || 0); ctx.scale(p.flip ? -1 : 1, 1);
   ctx.globalAlpha = p.alpha ?? 1;
@@ -111,7 +122,7 @@ function groove(o = {}) {
     return {
       x: (o.x ?? 960) + (o.step || 0) * Math.sin(PI * b / 2),
       y: (o.y ?? H + 80) - hop * (o.jump ?? 45),
-      h: o.h ?? 860,
+      h: o.abs ? o.h : (o.h ?? 860) * K.hs,
       lean: (o.lean ?? .07) * Math.sin(PI * b),
       wave: o.wave ?? 1, wph: b * PI * 2,
       sq: -.07 * Math.exp(-ph * 9) + .02 * hop,
@@ -195,12 +206,12 @@ const scenes = [
       ctx.restore();
       character(groove({ step: 60, h: 820 }), lb);
   } },
-  { name: '節奏 RHYTHM', beats: 8, draw(lb) {
+  { name: () => K.big + ' RHYTHM', beats: 8, draw(lb) {
       ctx.fillStyle = C.blue; ctx.fillRect(0, 0, W, H);
       burst(1500, 1100, -lb * .04, 26, C.blue2); halftone(.1);
-      txt('節奏', 1300 - lb * 16, 560, 500, { tc: true, fill: null, stroke: '#fff', lw: 10, align: 'center', ls: 40 });
-      pop('RHYTHM', 180, 200, 120, lb, 0, { fill: C.yellow, st: .05 });
-      typeOn('戰鼓，響起。', 1320, 930, 90, lb, 3, 1.4, { tc: true, fill: '#fff' });
+      txt(K.big, 1300 - lb * 16, 560, 500, { tc: true, fill: null, stroke: '#fff', lw: 10, align: 'center', ls: 40 });
+      pop('RHYTHM', 880, 170, 120, lb, 0, { fill: C.yellow, st: .05 });
+      typeOn(K.sub, 1320, 930, 90, lb, 3, 1.4, { tc: true, fill: '#fff' });
       character(groove({ x: 600, lean: .11, wave: 2.4, jump: 30 }), lb);
   } },
   { name: '三色分割', beats: 8, draw(lb) {
@@ -218,9 +229,9 @@ const scenes = [
       }
       ctx.fillStyle = '#111'; ctx.fillRect(638, 0, 4, H); ctx.fillRect(1278, 0, 4, H);
   } },
-  { name: 'WARRIOR', beats: 8, draw(lb) {
+  { id: 'drum', name: () => K.outline, beats: 8, draw(lb) {
       gridBg();
-      txt('WARRIOR', 960, 560, 330, { fill: null, stroke: C.grey, lw: 6, align: 'center' });
+      txt(K.outline, 960, 560, 330, { fill: null, stroke: C.grey, lw: 6, align: 'center' });
       const cols = [C.yellow, C.pink, C.cyan];
       for (let j = 0; j < 3; j++) {                // 每拍往外擴散的圓環
         const b = Math.floor(lb) - j, t = lb - b;
@@ -235,23 +246,24 @@ const scenes = [
       pop('MOTION', 170, 400, 170, lb, 0, { fill: '#fff' });
       pop('DESIGN', 170, 580, 170, lb, .5, { fill: C.pink });
       ctx.fillStyle = C.yellow; ctx.fillRect(176, 680, 700 * E.out(seg(lb, 1, 2)), 12);
-      typeOn('威風，動起來。', 176, 770, 60, lb, 1.5, 1.2, { tc: true, fill: '#fff' });
+      typeOn(K.motto, 176, 770, 60, lb, 1.5, 1.2, { tc: true, fill: '#fff' });
       const cx = 1380, cy = 540, R = 390;
       ctx.save(); ctx.beginPath(); ctx.arc(cx, cy, R, 0, 2 * PI); ctx.clip();   // 圓形徽章裡的角色
       ctx.fillStyle = '#2a2a3a'; ctx.fillRect(cx - R, cy - R, 2 * R, 2 * R);
       burst(cx, cy, lb * .1, 16, '#33334a');
-      character(groove({ x: cx, y: cy + R + 60, h: 820, jump: 40 }), lb);
+      character(groove({ x: cx, y: cy + R + 60, h: K.medalH, abs: true, jump: 40 }), lb);
       ctx.restore();
       ring(cx, cy, R, C.cyan, 14, -PI / 2, -PI / 2 + 2 * PI * E.inOut(seg(lb, 0, 1.2)));
       ring(cx, cy, R + 40 + 12 * pulse(lb), C.yellow, 5, lb, lb + 1.2);
   } },
   { name: '色塊快切', beats: 8, draw(lb) {
-      const set = [[C.pink, 'GENERAL', C.dark, false], [C.yellow, '將軍', C.pink, true], [C.cyan, '出陣', '#fff', true], [C.blue, '威風', C.yellow, true]];
+      const set = [[C.pink, K.blocks[0], C.dark, false], [C.yellow, K.blocks[1], C.pink, true], [C.cyan, K.blocks[2], '#fff', true], [C.blue, K.blocks[3], C.yellow, true]];
       const i = Math.min(3, Math.floor(lb / 2)), [bg, word, col, tc] = set[i], l = lb - i * 2;
       ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H); halftone(.12);
       const k = 1.25 - .25 * E.out(seg(l, 0, .4)), side = i % 2 ? 1 : -1;   // 每次切換都「砸」進畫面
+      const slim = K.hs > 1;                                  // 細長的全身角色：英文字放左、人站右
       if (!tc) {
-        ctx.save(); ctx.translate(960, 560); ctx.scale(k, k);
+        ctx.save(); ctx.translate(slim ? 720 : 960, 560); ctx.scale(k, k);
         txt(word, 0, 0, 300, { fill: col, align: 'center' });
         ctx.restore();
       } else [...word].forEach((ch, j) => {                    // 中文直排，放在角色對側
@@ -259,13 +271,13 @@ const scenes = [
         txt(ch, 0, 0, 400, { tc, fill: col, align: 'center', stroke: col === '#fff' ? C.dark : null, lw: 14 });
         ctx.restore();
       });
-      const p = groove({ x: tc ? 960 + side * 330 : 960, h: 920 * (1.08 - .08 * E.out(seg(l, 0, .5))), flip: side > 0, jump: 40, lean: .08 });
+      const p = groove({ x: tc ? 960 + side * 330 : slim ? 1480 : 960, h: 920 * (1.08 - .08 * E.out(seg(l, 0, .5))), flip: side > 0, jump: 40, lean: .08 });
       character(p, lb, i >= 2);
   } },
-  { name: '斜向字流', beats: 8, draw(lb) {
+  { id: 'stripe', name: '斜向字流', beats: 8, draw(lb) {
       const inv = lb >= 4;
       ctx.fillStyle = inv ? '#f5f3ee' : C.dark; ctx.fillRect(0, 0, W, H);
-      const words = '/ BEAT / FLOW / MOVE / 出陣 ';
+      const words = `/ BEAT / FLOW / MOVE / ${K.stripe} `;
       ctx.save(); ctx.translate(960, 540); ctx.rotate(-.21);
       ctx.font = font(110, true); const tw = ctx.measureText(words).width;   // 依實際字寬無縫接續
       for (let r = -7; r <= 7; r++) {
@@ -276,7 +288,7 @@ const scenes = [
       ctx.restore();
       character(groove({ speed: 2, lean: .09, jump: 30, flip: b => Math.floor(b / 2) % 2 === 1 }), lb);
   } },
-  { name: '出陣！', beats: 8, draw(lb) {
+  { name: () => K.finale, beats: 8, draw(lb) {
       ctx.fillStyle = C.blue; ctx.fillRect(0, 0, W, H);
       burst(960, 700, lb * .25, 24, C.blue2); halftone(.1); sparks(lb, 26, [C.yellow, C.pink, C.cyan, '#fff']);
       pop("LET'S", 260, 230, 150, lb, 0, { fill: '#fff' });
@@ -285,11 +297,12 @@ const scenes = [
       character(groove({ speed: lb > 4 ? 2 : 1, h: 820 * z, jump: 50 }), lb);
       const k = 1 + .08 * pulse(lb) * (lb > 2);
       ctx.save(); ctx.translate(960, 840); ctx.scale(k, k);
-      pop('出陣！', 0, 0, 300, lb, 2, { tc: true, fill: C.yellow, stroke: C.dark, lw: 16, align: 'center', rgb: true, ls: 20, st: .15 });
+      pop(K.finale, 0, 0, 300, lb, 2, { tc: true, fill: C.yellow, stroke: C.dark, lw: 16, align: 'center', rgb: true, ls: 20, st: .15 });
       ctx.restore();
       const f = seg(lb, 7.5, 8); if (f > 0) { ctx.fillStyle = `rgba(255,255,255,${f})`; ctx.fillRect(0, 0, W, H); }
   } },
 ];
+const sname = s => typeof s.name === 'function' ? s.name() : s.name;
 let acc = 0; scenes.forEach(s => { s.start = acc; acc += s.beats; });
 const LOOP_BEATS = acc, LOOP = LOOP_BEATS * SPB;
 
@@ -304,10 +317,10 @@ function hud(T, si) {
   ctx.font = `500 20px ${F_MONO}`; ctx.fillStyle = 'rgba(255,255,255,.85)'; ctx.textBaseline = 'middle';
   ctx.fillStyle = Math.floor(T * 2) % 2 ? '#ff3b3b' : 'rgba(255,59,59,.3)'; ctx.beginPath(); ctx.arc(m + 70, m + 22, 7, 0, 2 * PI); ctx.fill();
   ctx.fillStyle = 'rgba(255,255,255,.85)';
-  ctx.fillText('REC  GENERAL / BEAT', m + 86, m + 22);
+  ctx.fillText('REC  ' + K.hud, m + 86, m + 22);
   ctx.textAlign = 'right'; ctx.fillText('00:' + tc, W - m - 60, m + 22);
   ctx.fillText(`SCENE ${String(si + 1).padStart(2, '0')}/${String(scenes.length).padStart(2, '0')}`, W - m - 60, H - m - 22);
-  ctx.textAlign = 'left'; ctx.fillText(`${BPM} BPM  ·  ${scenes[si].name}`, m + 60, H - m - 22);
+  ctx.textAlign = 'left'; ctx.fillText(`${BPM} BPM  ·  ${sname(scenes[si])}`, m + 60, H - m - 22);
   ctx.restore();
 }
 
@@ -359,9 +372,9 @@ function playStep(step, t) {
     if (lb === 0) { taiko(t); noise(t, 1.2, 5000, 'highpass', .25); } else kick(t);
     if (lb % 2 === 1) snare(t);
     tone(t, BASS[Math.floor(beat / 4) % 4], BASS[Math.floor(beat / 4) % 4], .4, 'sawtooth', .12);
-  } else hat(t, sc.name === '斜向字流' ? .28 : .16);
-  const n = MELO[inLoop % 16]; if (n >= 0 && sc.name !== 'WARRIOR') tone(t, PENTA[n], PENTA[n], .22, 'square', .05);
-  if (sc.name === 'WARRIOR' && off === 1 && lb % 2 === 1) taiko(t);
+  } else hat(t, sc.id === 'stripe' ? .28 : .16);
+  const n = MELO[inLoop % 16]; if (n >= 0 && sc.id !== 'drum') tone(t, PENTA[n], PENTA[n], .22, 'square', .05);
+  if (sc.id === 'drum' && off === 1 && lb % 2 === 1) taiko(t);
 }
 function scheduleAudio(T) {
   if (!soundOn || !playing) return;
@@ -392,13 +405,22 @@ $('bGo').onclick = () => { $('start').remove(); setSound(true); seek(0); };
 addEventListener('keydown', e => { if (e.code === 'Space') { e.preventDefault(); setPlay(!playing); } });
 
 const chips = $('chips');
-scenes.forEach((s, i) => {
-  const b = document.createElement('button'); b.textContent = `${i + 1}. ${s.name}`;
-  b.onclick = () => { seek(s.start * SPB); setPlay(true); }; chips.appendChild(b);
-});
+function buildChips() {
+  chips.textContent = ''; lastSi = -1;
+  scenes.forEach((s, i) => {
+    const b = document.createElement('button'); b.textContent = `${i + 1}. ${sname(s)}`;
+    b.onclick = () => { seek(s.start * SPB); setPlay(true); }; chips.appendChild(b);
+  });
+}
+function setCast(key) {
+  K = CAST[key]; makeTints(); buildChips(); document.title = K.title;
+  $('bCast').textContent = '👤 ' + K.title; history.replaceState(null, '', '#' + key);
+}
+$('bCast').onclick = () => { const ks = Object.keys(CAST); setCast(ks[(ks.indexOf(Object.keys(CAST).find(k => CAST[k] === K)) + 1) % ks.length]); };
+addEventListener('hashchange', () => CAST[location.hash.slice(1)] && CAST[location.hash.slice(1)] !== K && setCast(location.hash.slice(1)));
 
 // 錄製：畫布 + 音效 → 影片檔（Chrome/Edge 為 webm，Safari 為 mp4）
-let recording = false;
+let recording = false, lastSi = -1;
 $('bRec').onclick = () => {
   if (recording || !window.MediaRecorder) { if (!window.MediaRecorder) $('msg').textContent = '此瀏覽器不支援錄製'; return; }
   setSound(true); setPlay(true); seek(0);
@@ -410,8 +432,8 @@ $('bRec').onclick = () => {
   rec.onstop = () => {
     recording = false; $('bRec').classList.remove('on'); $('bRec').textContent = '⏺ 錄製一輪';
     const ext = mime.includes('mp4') ? 'mp4' : 'webm', a = document.createElement('a');
-    a.href = URL.createObjectURL(new Blob(parts, { type: mime || 'video/webm' })); a.download = `general-beat.${ext}`; a.click();
-    $('msg').textContent = `已下載 general-beat.${ext}`;
+    a.href = URL.createObjectURL(new Blob(parts, { type: mime || 'video/webm' })); a.download = `${K.src.split('.')[0]}-beat.${ext}`; a.click();
+    $('msg').textContent = `已下載 ${a.download}`;
   };
   recording = true; $('bRec').classList.add('on'); rec.start(250);
   const tick = () => { const left = LOOP - now(); $('bRec').textContent = `⏺ 錄製中 ${Math.max(0, left).toFixed(0)}s`; left > 0 ? setTimeout(tick, 250) : rec.stop(); };
@@ -422,7 +444,6 @@ $('bRec').onclick = () => {
 let idle; const wake = () => { $('bar').classList.remove('hide'); clearTimeout(idle); idle = setTimeout(() => $('bar').classList.add('hide'), 3000); };
 ['mousemove', 'touchstart', 'keydown'].forEach(ev => addEventListener(ev, wake)); wake();
 
-let lastSi = -1;
 function frame() {
   const T = now();
   scheduleAudio(T);
@@ -431,10 +452,10 @@ function frame() {
   requestAnimationFrame(frame);
 }
 Promise.all([
-  img.decode(),
-  document.fonts.load(font(100, false)), document.fonts.load(font(100, true), '節奏戰鼓響起威風動起來將軍出陣！，。'),
+  ...Object.values(CAST).map(c => c.img.decode()),
+  document.fonts.load(font(100, false)), document.fonts.load(font(100, true), '節奏戰鼓響起威風動起來將軍出陣！，。紫璃翻開下一頁書香閱讀心動發'),
   document.fonts.load(`500 20px ${F_MONO}`),
-].map(p => p.catch(() => {}))).then(() => { makeTints(); seek(0); frame(); });
+].map(p => p.catch(() => {}))).then(() => { setCast(Object.keys(CAST).find(k => CAST[k] === K)); seek(0); frame(); });
 </script>
 </body>
 </html>
