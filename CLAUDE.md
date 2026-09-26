@@ -19,6 +19,7 @@
 - **mv-creator**：MV 創作追蹤器（主題→歌詞→曲風→Suno→Grok 影片）
 - **edu-video-maker**：影音教學 Agent 工作室（腳本→語音→影片）
 - **zili-atelier**：紫璃工坊 —— 固定角色模板的服裝／場景生圖器（單檔 HTML + Firebase 代理），部署見 `tools/zili-atelier/README.md`
+- **general-beat**：將軍節拍 —— 角色 Motion Graphic 節拍動畫（Canvas + Web Audio，可錄成影片），說明見 `tools/general-beat/README.md`
 - **首頁 `index.html`**：Firebase Hosting 的工具總覽入口
 - **telegram-notifier**：共用的 Telegram 通知基礎設施（`/functions` + `tools/shared/telegram-notify.js`），部署步驟見 `tools/telegram-notifier/README.md`；bot 是 @ma7942147_bot
 

@@ -1,0 +1,440 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>將軍節拍</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Noto+Sans+TC:wght@900&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+  :root { --bg:#0b0b10; --panel:rgba(20,20,28,.82); --ink:#f3f1ec; --muted:#9a97a3; --accent:#ffe100; }
+  * { box-sizing:border-box; }
+  html,body { margin:0; height:100%; background:var(--bg); color:var(--ink);
+    font-family:"Noto Sans TC",system-ui,sans-serif; overflow:hidden; }
+  #stage { position:fixed; inset:0; display:flex; align-items:center; justify-content:center; }
+  canvas { width:100%; height:auto; max-height:100%; aspect-ratio:16/9; object-fit:contain; display:block; background:#000; }
+  #bar { position:fixed; left:50%; bottom:16px; transform:translateX(-50%); width:min(960px,calc(100% - 32px));
+    background:var(--panel); backdrop-filter:blur(8px); border-radius:14px; padding:10px 12px;
+    display:flex; flex-wrap:wrap; gap:8px; align-items:center; transition:opacity .4s; font-size:14px; }
+  #bar.hide { opacity:0; pointer-events:none; }
+  button { font:inherit; font-weight:700; color:var(--ink); background:#2a2a36; border:0; border-radius:9px;
+    padding:8px 12px; cursor:pointer; }
+  button:hover { background:#383848; }
+  button.on { background:var(--accent); color:#111; }
+  #chips { display:flex; flex-wrap:wrap; gap:6px; flex:1 1 100%; }
+  #chips button { padding:5px 9px; font-size:12px; font-weight:500; }
+  #chips button.cur { outline:2px solid var(--accent); }
+  #msg { color:var(--muted); font-size:12px; margin-left:auto; }
+  #start { position:fixed; inset:0; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,.55); }
+  #start button { font-size:20px; padding:16px 28px; background:var(--accent); color:#111; }
+</style>
+</head>
+<body>
+<div id="stage"><canvas id="c" width="1920" height="1080"></canvas></div>
+<div id="bar">
+  <button id="bPlay">⏸ 暫停</button>
+  <button id="bSound">🔇 音效</button>
+  <button id="bRec">⏺ 錄製一輪</button>
+  <span id="msg">空白鍵：播放／暫停</span>
+  <div id="chips"></div>
+</div>
+<div id="start"><button id="bGo">▶ 開始（含音效）</button></div>
+
+<script>
+// ───────────── 基本設定 ─────────────
+const cv = document.getElementById('c'), ctx = cv.getContext('2d');
+const W = 1920, H = 1080, BPM = 120, SPB = 60 / BPM, PI = Math.PI;
+const F_EN = '"Archivo Black", "Arial Black", sans-serif';
+const F_TC = '"Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif';
+const F_MONO = '"JetBrains Mono", ui-monospace, monospace';
+const C = { blue:'#3446f0', blue2:'#4658ff', pink:'#ff4f9a', yellow:'#ffe100', cyan:'#1fd3ff', dark:'#1b1b24', grid:'#272735', white:'#ffffff', grey:'#c4c4cc' };
+
+const clamp = (v, a = 0, b = 1) => Math.max(a, Math.min(b, v));
+const seg = (t, a, b) => clamp((t - a) / (b - a));
+const E = {
+  out: t => 1 - Math.pow(1 - t, 3),
+  inOut: t => t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2,
+  back: t => { const c = 1.9; return 1 + (c + 1) * Math.pow(t - 1, 3) + c * Math.pow(t - 1, 2); },
+};
+const pulse = (lb, k = 6) => Math.exp(-(((lb % 1) + 1) % 1) * k);   // 每拍一次的衝擊
+const rnd = i => { const x = Math.sin(i * 127.1 + 311.7) * 43758.5453; return x - Math.floor(x); };
+
+// ───────────── 角色素材：原圖 + 三色殘影 ─────────────
+const img = new Image();
+img.src = 'general.webp';
+const tint = {};
+function makeTints() {
+  for (const [k, col] of Object.entries({ pink: C.pink, cyan: C.cyan, yellow: C.yellow })) {
+    const t = document.createElement('canvas'); t.width = img.width; t.height = img.height;
+    const g = t.getContext('2d'); g.drawImage(img, 0, 0);
+    g.globalCompositeOperation = 'source-in'; g.fillStyle = col; g.fillRect(0, 0, t.width, t.height);
+    tint[k] = t;
+  }
+}
+
+// 半網點圖樣
+const dotPat = (() => {
+  const t = document.createElement('canvas'); t.width = t.height = 14;
+  const g = t.getContext('2d'); g.fillStyle = '#fff'; g.beginPath(); g.arc(7, 7, 2.2, 0, 2 * PI); g.fill();
+  return ctx.createPattern(t, 'repeat');
+})();
+
+// 角色：把圖切成水平細條，越往上位移越大 → 做出「從腰部擺動」的扭動感
+function drawChar(src, p) {
+  const iw = src.width, ih = src.height, sq = p.sq || 0;
+  const h = p.h * (1 + sq), w = p.h * iw / ih * (1 - sq * .6), N = 40;
+  ctx.save();
+  ctx.translate(p.x, p.y); ctx.rotate(p.rot || 0); ctx.scale(p.flip ? -1 : 1, 1);
+  ctx.globalAlpha = p.alpha ?? 1;
+  for (let i = 0; i < N; i++) {
+    const v = i / N, k = Math.pow(1 - (v + .5 / N), 1.7);
+    const dx = (p.lean || 0) * k * h + (p.wave || 0) * Math.sin(v * 7 + (p.wph || 0)) * k * h * .05;
+    ctx.drawImage(src, 0, v * ih, iw, ih / N + 1, -w / 2 + dx, -h + v * h, w, h / N + 1.5);
+  }
+  ctx.restore();
+}
+// 角色 + RGB 殘影（殘影用「稍早的姿勢」畫，就有拖影效果）
+function character(poseFn, lb, ghosts = true) {
+  if (ghosts) {
+    const a = poseFn(lb - .12), b = poseFn(lb - .06);
+    drawChar(tint.cyan, { ...a, x: a.x - 12, alpha: .9 });
+    drawChar(tint.pink, { ...b, x: b.x + 10, alpha: .9 });
+  }
+  drawChar(img, poseFn(lb));
+}
+// 基本舞步：左右擺 + 每拍落地彈跳 + 落地壓扁
+function groove(o = {}) {
+  return lb => {
+    const sp = o.speed || 1, b = lb * sp, ph = ((b % 1) + 1) % 1;
+    const hop = Math.abs(Math.sin(PI * b));
+    return {
+      x: (o.x ?? 960) + (o.step || 0) * Math.sin(PI * b / 2),
+      y: (o.y ?? H + 80) - hop * (o.jump ?? 45),
+      h: o.h ?? 860,
+      lean: (o.lean ?? .07) * Math.sin(PI * b),
+      wave: o.wave ?? 1, wph: b * PI * 2,
+      sq: -.07 * Math.exp(-ph * 9) + .02 * hop,
+      rot: (o.rot ?? .015) * Math.sin(PI * b),
+      flip: typeof o.flip === 'function' ? o.flip(lb) : o.flip,
+    };
+  };
+}
+
+// ───────────── 繪圖小工具 ─────────────
+function burst(cx, cy, rot, n, col) {
+  ctx.save(); ctx.translate(cx, cy); ctx.rotate(rot); ctx.fillStyle = col;
+  for (let i = 0; i < n; i++) { const a = i / n * 2 * PI; ctx.beginPath(); ctx.moveTo(0, 0); ctx.arc(0, 0, 2600, a, a + PI / n); ctx.fill(); }
+  ctx.restore();
+}
+function halftone(a = .12) { ctx.save(); ctx.globalAlpha = a; ctx.fillStyle = dotPat; ctx.fillRect(0, 0, W, H); ctx.restore(); }
+function gridBg(col = C.dark) {
+  ctx.fillStyle = col; ctx.fillRect(0, 0, W, H);
+  ctx.strokeStyle = C.grid; ctx.lineWidth = 2; ctx.beginPath();
+  for (let x = 0; x <= W; x += 64) { ctx.moveTo(x, 0); ctx.lineTo(x, H); }
+  for (let y = 0; y <= H; y += 64) { ctx.moveTo(0, y); ctx.lineTo(W, y); }
+  ctx.stroke();
+}
+function font(size, tc) { return `900 ${size}px ${tc ? F_TC : F_EN}`; }
+function txt(s, x, y, size, o = {}) {
+  ctx.save();
+  ctx.font = font(size, o.tc); ctx.textAlign = o.align || 'left'; ctx.textBaseline = 'middle';
+  if (o.ls) ctx.letterSpacing = o.ls + 'px';
+  if (o.rgb) { ctx.fillStyle = C.cyan; ctx.fillText(s, x - 10, y); ctx.fillStyle = C.pink; ctx.fillText(s, x + 10, y + 5); }
+  if (o.stroke) { ctx.lineJoin = 'round'; ctx.lineWidth = o.lw || 6; ctx.strokeStyle = o.stroke; ctx.strokeText(s, x, y); }
+  if (o.fill !== null) { ctx.fillStyle = o.fill || '#fff'; ctx.fillText(s, x, y); }
+  ctx.restore();
+}
+// 逐字彈出
+function pop(s, x, y, size, lb, start, o = {}) {
+  ctx.save(); ctx.font = font(size, o.tc);
+  const ls = o.ls || 0, chars = [...s];
+  const ws = chars.map(c => ctx.measureText(c).width), total = ws.reduce((a, b) => a + b, 0) + ls * (chars.length - 1);
+  let cx = o.align === 'center' ? x - total / 2 : o.align === 'right' ? x - total : x;
+  ctx.restore();
+  chars.forEach((c, i) => {
+    const t = seg(lb, start + i * (o.st ?? .07), start + i * (o.st ?? .07) + .35);
+    if (t > 0) {
+      const s2 = E.back(t);
+      ctx.save(); ctx.translate(cx + ws[i] / 2, y); ctx.scale(s2, s2); ctx.rotate((1 - t) * .5 * (i % 2 ? 1 : -1));
+      txt(c, 0, 0, size, { ...o, align: 'center', ls: 0 });
+      ctx.restore();
+    }
+    cx += ws[i] + ls;
+  });
+}
+function ring(x, y, r, col, lw, a0 = 0, a1 = 2 * PI) {
+  ctx.save(); ctx.strokeStyle = col; ctx.lineWidth = lw; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.arc(x, y, r, a0, a1); ctx.stroke(); ctx.restore();
+}
+function sparks(lb, n, cols) {
+  for (let i = 0; i < n; i++) {
+    const x = (rnd(i) * W + lb * 40 * (rnd(i + 9) - .5)) % W, y = (rnd(i + 3) * H - lb * 60 * (.4 + rnd(i + 5)) + H * 4) % H;
+    const s = 10 + rnd(i + 7) * 16, k = 1 + .4 * pulse(lb + rnd(i));
+    ctx.save(); ctx.translate(x, y); ctx.rotate(lb * (rnd(i + 2) - .5) * 2); ctx.scale(k, k);
+    ctx.fillStyle = ctx.strokeStyle = cols[i % cols.length]; ctx.lineWidth = 5;
+    if (i % 3 === 0) { ctx.beginPath(); ctx.moveTo(0, -s); ctx.lineTo(s * .87, s * .5); ctx.lineTo(-s * .87, s * .5); ctx.fill(); }
+    else if (i % 3 === 1) { ctx.beginPath(); ctx.moveTo(-s, 0); ctx.lineTo(s, 0); ctx.moveTo(0, -s); ctx.lineTo(0, s); ctx.stroke(); }
+    else { ctx.beginPath(); ctx.arc(0, 0, s * .5, 0, 2 * PI); ctx.stroke(); }
+    ctx.restore();
+  }
+}
+function typeOn(s, x, y, size, lb, start, dur, o) { const n = Math.floor([...s].length * seg(lb, start, start + dur)); if (n) txt([...s].slice(0, n).join(''), x, y, size, o); }
+
+// ───────────── 場景（單位：拍；120 BPM → 1 拍 0.5 秒） ─────────────
+const scenes = [
+  { name: 'FEEL THE BEAT', beats: 8, draw(lb) {
+      ctx.fillStyle = C.blue; ctx.fillRect(0, 0, W, H);
+      burst(960, 620, lb * .05, 22, C.blue2); halftone(.1); sparks(lb, 18, [C.yellow, C.pink, C.cyan, '#fff']);
+      pop('FEEL', 330, 250, 170, lb, 0, { fill: '#fff' });
+      pop('THE', 1240, 250, 170, lb, 1, { fill: '#fff' });
+      const beatCol = lb < 4 ? C.grey : (Math.floor(lb) % 2 ? C.yellow : '#fff');
+      const k = 1 + .06 * pulse(lb) * (lb > 2);
+      ctx.save(); ctx.translate(960, 640); ctx.scale(k, k);
+      pop('BEAT', 0, 0, 430, lb, 2, { fill: beatCol, align: 'center', st: .1, rgb: lb > 4 });
+      ctx.restore();
+      character(groove({ step: 60, h: 820 }), lb);
+  } },
+  { name: '節奏 RHYTHM', beats: 8, draw(lb) {
+      ctx.fillStyle = C.blue; ctx.fillRect(0, 0, W, H);
+      burst(1500, 1100, -lb * .04, 26, C.blue2); halftone(.1);
+      txt('節奏', 1300 - lb * 16, 560, 500, { tc: true, fill: null, stroke: '#fff', lw: 10, align: 'center', ls: 40 });
+      pop('RHYTHM', 180, 200, 120, lb, 0, { fill: C.yellow, st: .05 });
+      typeOn('戰鼓，響起。', 1320, 930, 90, lb, 3, 1.4, { tc: true, fill: '#fff' });
+      character(groove({ x: 600, lean: .11, wave: 2.4, jump: 30 }), lb);
+  } },
+  { name: '三色分割', beats: 8, draw(lb) {
+      const cols = [C.pink, C.yellow, C.cyan];
+      for (let i = 0; i < 3; i++) {
+        const t = E.out(seg(lb, i * .2, i * .2 + .6)), x0 = i * 640, dy = (1 - t) * (i % 2 ? H : -H);
+        ctx.save(); ctx.beginPath(); ctx.rect(x0, dy, 640, H); ctx.clip();
+        ctx.fillStyle = cols[i]; ctx.fillRect(x0, dy, 640, H); halftone(.14);
+        txt('0' + (i + 1), x0 + 50, 160 + dy, 90, { fill: 'rgba(0,0,0,.18)' });
+        const fl = (Math.floor(lb) + i) % 2 === 0;   // 每拍左右翻面，三格交錯
+        const pose = groove({ x: x0 + 320, h: 780, jump: 60, lean: .09, flip: fl, speed: lb >= 4 ? 2 : 1 })(lb + i * .33);
+        pose.y += dy;
+        drawChar(img, pose);
+        ctx.restore();
+      }
+      ctx.fillStyle = '#111'; ctx.fillRect(638, 0, 4, H); ctx.fillRect(1278, 0, 4, H);
+  } },
+  { name: 'WARRIOR', beats: 8, draw(lb) {
+      gridBg();
+      txt('WARRIOR', 960, 560, 330, { fill: null, stroke: C.grey, lw: 6, align: 'center' });
+      const cols = [C.yellow, C.pink, C.cyan];
+      for (let j = 0; j < 3; j++) {                // 每拍往外擴散的圓環
+        const b = Math.floor(lb) - j, t = lb - b;
+        if (b < 0) continue;
+        ctx.save(); ctx.globalAlpha = clamp(1 - t / 3); ring(960, 520, 200 + t * 240, cols[b % 3], 14 * (1 - t / 3) + 2); ctx.restore();
+      }
+      ring(960, 520, 330 + 20 * pulse(lb), C.pink, 12, -PI / 2, -PI / 2 + 2 * PI * E.out(seg(lb, 0, 1.5)));
+      character(groove({ jump: 70, lean: .06, speed: .5 }), lb);
+  } },
+  { name: 'MOTION DESIGN', beats: 6, draw(lb) {
+      gridBg();
+      pop('MOTION', 170, 400, 170, lb, 0, { fill: '#fff' });
+      pop('DESIGN', 170, 580, 170, lb, .5, { fill: C.pink });
+      ctx.fillStyle = C.yellow; ctx.fillRect(176, 680, 700 * E.out(seg(lb, 1, 2)), 12);
+      typeOn('威風，動起來。', 176, 770, 60, lb, 1.5, 1.2, { tc: true, fill: '#fff' });
+      const cx = 1380, cy = 540, R = 390;
+      ctx.save(); ctx.beginPath(); ctx.arc(cx, cy, R, 0, 2 * PI); ctx.clip();   // 圓形徽章裡的角色
+      ctx.fillStyle = '#2a2a3a'; ctx.fillRect(cx - R, cy - R, 2 * R, 2 * R);
+      burst(cx, cy, lb * .1, 16, '#33334a');
+      character(groove({ x: cx, y: cy + R + 60, h: 820, jump: 40 }), lb);
+      ctx.restore();
+      ring(cx, cy, R, C.cyan, 14, -PI / 2, -PI / 2 + 2 * PI * E.inOut(seg(lb, 0, 1.2)));
+      ring(cx, cy, R + 40 + 12 * pulse(lb), C.yellow, 5, lb, lb + 1.2);
+  } },
+  { name: '色塊快切', beats: 8, draw(lb) {
+      const set = [[C.pink, 'GENERAL', C.dark, false], [C.yellow, '將軍', C.pink, true], [C.cyan, '出陣', '#fff', true], [C.blue, '威風', C.yellow, true]];
+      const i = Math.min(3, Math.floor(lb / 2)), [bg, word, col, tc] = set[i], l = lb - i * 2;
+      ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H); halftone(.12);
+      const k = 1.25 - .25 * E.out(seg(l, 0, .4)), side = i % 2 ? 1 : -1;   // 每次切換都「砸」進畫面
+      if (!tc) {
+        ctx.save(); ctx.translate(960, 560); ctx.scale(k, k);
+        txt(word, 0, 0, 300, { fill: col, align: 'center' });
+        ctx.restore();
+      } else [...word].forEach((ch, j) => {                    // 中文直排，放在角色對側
+        ctx.save(); ctx.translate(960 - side * 470, 330 + j * 420); ctx.scale(k, k);
+        txt(ch, 0, 0, 400, { tc, fill: col, align: 'center', stroke: col === '#fff' ? C.dark : null, lw: 14 });
+        ctx.restore();
+      });
+      const p = groove({ x: tc ? 960 + side * 330 : 960, h: 920 * (1.08 - .08 * E.out(seg(l, 0, .5))), flip: side > 0, jump: 40, lean: .08 });
+      character(p, lb, i >= 2);
+  } },
+  { name: '斜向字流', beats: 8, draw(lb) {
+      const inv = lb >= 4;
+      ctx.fillStyle = inv ? '#f5f3ee' : C.dark; ctx.fillRect(0, 0, W, H);
+      const words = '/ BEAT / FLOW / MOVE / 出陣 ';
+      ctx.save(); ctx.translate(960, 540); ctx.rotate(-.21);
+      ctx.font = font(110, true); const tw = ctx.measureText(words).width;   // 依實際字寬無縫接續
+      for (let r = -7; r <= 7; r++) {
+        const dir = r % 2 ? 1 : -1, off = ((lb * 180 * dir + r * 333) % tw + tw) % tw;
+        const col = r % 2 ? C.pink : (inv ? C.dark : '#fff');
+        for (let k = -2; k * tw < 2600; k++) txt(words, -1500 + k * tw + off, r * 130, 110, { tc: true, fill: col });
+      }
+      ctx.restore();
+      character(groove({ speed: 2, lean: .09, jump: 30, flip: b => Math.floor(b / 2) % 2 === 1 }), lb);
+  } },
+  { name: '出陣！', beats: 8, draw(lb) {
+      ctx.fillStyle = C.blue; ctx.fillRect(0, 0, W, H);
+      burst(960, 700, lb * .25, 24, C.blue2); halftone(.1); sparks(lb, 26, [C.yellow, C.pink, C.cyan, '#fff']);
+      pop("LET'S", 260, 230, 150, lb, 0, { fill: '#fff' });
+      pop('GO', 1380, 230, 150, lb, .5, { fill: C.yellow });
+      const z = 1 + .3 * E.inOut(seg(lb, 6, 8));
+      character(groove({ speed: lb > 4 ? 2 : 1, h: 820 * z, jump: 50 }), lb);
+      const k = 1 + .08 * pulse(lb) * (lb > 2);
+      ctx.save(); ctx.translate(960, 840); ctx.scale(k, k);
+      pop('出陣！', 0, 0, 300, lb, 2, { tc: true, fill: C.yellow, stroke: C.dark, lw: 16, align: 'center', rgb: true, ls: 20, st: .15 });
+      ctx.restore();
+      const f = seg(lb, 7.5, 8); if (f > 0) { ctx.fillStyle = `rgba(255,255,255,${f})`; ctx.fillRect(0, 0, W, H); }
+  } },
+];
+let acc = 0; scenes.forEach(s => { s.start = acc; acc += s.beats; });
+const LOOP_BEATS = acc, LOOP = LOOP_BEATS * SPB;
+
+// 仿攝影機 HUD
+function hud(T, si) {
+  const f = Math.floor(T * 24), tc = [Math.floor(T / 60), Math.floor(T) % 60, f % 24].map(n => String(n).padStart(2, '0')).join(':');
+  ctx.save(); ctx.strokeStyle = 'rgba(255,255,255,.85)'; ctx.lineWidth = 3;
+  const m = 34, L = 44;
+  [[m, m, 1, 1], [W - m, m, -1, 1], [m, H - m, 1, -1], [W - m, H - m, -1, -1]].forEach(([x, y, a, b]) => {
+    ctx.beginPath(); ctx.moveTo(x + a * L, y); ctx.lineTo(x, y); ctx.lineTo(x, y + b * L); ctx.stroke();
+  });
+  ctx.font = `500 20px ${F_MONO}`; ctx.fillStyle = 'rgba(255,255,255,.85)'; ctx.textBaseline = 'middle';
+  ctx.fillStyle = Math.floor(T * 2) % 2 ? '#ff3b3b' : 'rgba(255,59,59,.3)'; ctx.beginPath(); ctx.arc(m + 70, m + 22, 7, 0, 2 * PI); ctx.fill();
+  ctx.fillStyle = 'rgba(255,255,255,.85)';
+  ctx.fillText('REC  GENERAL / BEAT', m + 86, m + 22);
+  ctx.textAlign = 'right'; ctx.fillText('00:' + tc, W - m - 60, m + 22);
+  ctx.fillText(`SCENE ${String(si + 1).padStart(2, '0')}/${String(scenes.length).padStart(2, '0')}`, W - m - 60, H - m - 22);
+  ctx.textAlign = 'left'; ctx.fillText(`${BPM} BPM  ·  ${scenes[si].name}`, m + 60, H - m - 22);
+  ctx.restore();
+}
+
+function render(T) {
+  const gb = (T % LOOP) / SPB;
+  let si = scenes.length - 1; while (scenes[si].start > gb) si--;
+  const s = scenes[si], lb = gb - s.start;
+  ctx.save(); s.draw(lb); ctx.restore();
+  if (lb < .12) { ctx.fillStyle = `rgba(255,255,255,${.5 * (1 - lb / .12)})`; ctx.fillRect(0, 0, W, H); }  // 換場閃白
+  hud(T % LOOP, si);
+  return si;
+}
+
+// ───────────── 音效：Web Audio 即時合成（大鼓／小鼓／鈸／五聲音階旋律） ─────────────
+let actx = null, master = null, recDest = null, soundOn = false, nextStep = 0;
+const STEP = SPB / 2;   // 八分音符
+function initAudio() {
+  if (actx) return;
+  actx = new (window.AudioContext || window.webkitAudioContext)();
+  master = actx.createGain(); master.gain.value = .7;
+  const comp = actx.createDynamicsCompressor(); master.connect(comp); comp.connect(actx.destination);
+  recDest = actx.createMediaStreamDestination(); comp.connect(recDest);
+}
+let noiseBuf = null;
+function noise(t, dur, freq, type, gain) {
+  if (!noiseBuf) { noiseBuf = actx.createBuffer(1, actx.sampleRate, actx.sampleRate); const d = noiseBuf.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; }
+  const s = actx.createBufferSource(); s.buffer = noiseBuf;
+  const f = actx.createBiquadFilter(); f.type = type; f.frequency.value = freq;
+  const g = actx.createGain(); g.gain.setValueAtTime(gain, t); g.gain.exponentialRampToValueAtTime(.001, t + dur);
+  s.connect(f); f.connect(g); g.connect(master); s.start(t); s.stop(t + dur);
+}
+function tone(t, f0, f1, dur, type, gain) {
+  const o = actx.createOscillator(); o.type = type;
+  o.frequency.setValueAtTime(f0, t); if (f1 !== f0) o.frequency.exponentialRampToValueAtTime(f1, t + dur * .6);
+  const g = actx.createGain(); g.gain.setValueAtTime(gain, t); g.gain.exponentialRampToValueAtTime(.001, t + dur);
+  o.connect(g); g.connect(master); o.start(t); o.stop(t + dur);
+}
+const kick = t => tone(t, 150, 42, .45, 'sine', 1);
+const taiko = t => { tone(t, 110, 55, .9, 'sine', .9); noise(t, .25, 400, 'lowpass', .6); };
+const snare = t => { noise(t, .18, 1800, 'bandpass', .7); tone(t, 220, 180, .1, 'triangle', .25); };
+const hat = (t, a = .18) => noise(t, .05, 8000, 'highpass', a);
+const PENTA = [293.66, 329.63, 369.99, 440, 493.88, 587.33, 659.25, 739.99];   // D 五聲音階
+const MELO = [0, -1, 2, 3, -1, 5, 3, 2, 4, -1, 3, 2, 0, -1, 1, 2];
+const BASS = [73.42, 73.42, 98, 110];
+function playStep(step, t) {
+  const inLoop = step % (LOOP_BEATS * 2), beat = Math.floor(inLoop / 2), off = inLoop % 2;
+  const sc = scenes.find(s => beat >= s.start && beat < s.start + s.beats), lb = beat - sc.start;
+  if (off === 0) {
+    if (lb === 0) { taiko(t); noise(t, 1.2, 5000, 'highpass', .25); } else kick(t);
+    if (lb % 2 === 1) snare(t);
+    tone(t, BASS[Math.floor(beat / 4) % 4], BASS[Math.floor(beat / 4) % 4], .4, 'sawtooth', .12);
+  } else hat(t, sc.name === '斜向字流' ? .28 : .16);
+  const n = MELO[inLoop % 16]; if (n >= 0 && sc.name !== 'WARRIOR') tone(t, PENTA[n], PENTA[n], .22, 'square', .05);
+  if (sc.name === 'WARRIOR' && off === 1 && lb % 2 === 1) taiko(t);
+}
+function scheduleAudio(T) {
+  if (!soundOn || !playing) return;
+  while (nextStep * STEP < T + .15) {
+    const when = actx.currentTime + (nextStep * STEP - T);
+    if (when >= actx.currentTime - .01) playStep(nextStep, Math.max(when, actx.currentTime));
+    nextStep++;
+  }
+}
+
+// ───────────── 播放控制 ─────────────
+let playing = true, base = 0, t0 = performance.now();
+const now = () => playing ? base + (performance.now() - t0) / 1000 : base;
+function seek(T) { base = T; t0 = performance.now(); nextStep = Math.ceil(T / STEP); }
+const $ = id => document.getElementById(id);
+function setPlay(p) {
+  if (p === playing) return;
+  base = now(); playing = p; t0 = performance.now(); nextStep = Math.ceil(base / STEP);
+  $('bPlay').textContent = p ? '⏸ 暫停' : '▶ 播放';
+}
+function setSound(on) {
+  initAudio(); actx.resume(); soundOn = on; nextStep = Math.ceil(now() / STEP);
+  $('bSound').textContent = on ? '🔊 音效' : '🔇 音效'; $('bSound').classList.toggle('on', on);
+}
+$('bPlay').onclick = () => setPlay(!playing);
+$('bSound').onclick = () => setSound(!soundOn);
+$('bGo').onclick = () => { $('start').remove(); setSound(true); seek(0); };
+addEventListener('keydown', e => { if (e.code === 'Space') { e.preventDefault(); setPlay(!playing); } });
+
+const chips = $('chips');
+scenes.forEach((s, i) => {
+  const b = document.createElement('button'); b.textContent = `${i + 1}. ${s.name}`;
+  b.onclick = () => { seek(s.start * SPB); setPlay(true); }; chips.appendChild(b);
+});
+
+// 錄製：畫布 + 音效 → 影片檔（Chrome/Edge 為 webm，Safari 為 mp4）
+let recording = false;
+$('bRec').onclick = () => {
+  if (recording || !window.MediaRecorder) { if (!window.MediaRecorder) $('msg').textContent = '此瀏覽器不支援錄製'; return; }
+  setSound(true); setPlay(true); seek(0);
+  const stream = cv.captureStream(60);
+  recDest.stream.getAudioTracks().forEach(t => stream.addTrack(t));
+  const mime = ['video/webm;codecs=vp9,opus', 'video/webm', 'video/mp4'].find(m => MediaRecorder.isTypeSupported(m)) || '';
+  const rec = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 12e6 }), parts = [];
+  rec.ondataavailable = e => e.data.size && parts.push(e.data);
+  rec.onstop = () => {
+    recording = false; $('bRec').classList.remove('on'); $('bRec').textContent = '⏺ 錄製一輪';
+    const ext = mime.includes('mp4') ? 'mp4' : 'webm', a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob(parts, { type: mime || 'video/webm' })); a.download = `general-beat.${ext}`; a.click();
+    $('msg').textContent = `已下載 general-beat.${ext}`;
+  };
+  recording = true; $('bRec').classList.add('on'); rec.start(250);
+  const tick = () => { const left = LOOP - now(); $('bRec').textContent = `⏺ 錄製中 ${Math.max(0, left).toFixed(0)}s`; left > 0 ? setTimeout(tick, 250) : rec.stop(); };
+  tick();
+};
+
+// 控制列 3 秒沒動就淡出
+let idle; const wake = () => { $('bar').classList.remove('hide'); clearTimeout(idle); idle = setTimeout(() => $('bar').classList.add('hide'), 3000); };
+['mousemove', 'touchstart', 'keydown'].forEach(ev => addEventListener(ev, wake)); wake();
+
+let lastSi = -1;
+function frame() {
+  const T = now();
+  scheduleAudio(T);
+  const si = render(T);
+  if (si !== lastSi) { [...chips.children].forEach((b, i) => b.classList.toggle('cur', i === si)); lastSi = si; }
+  requestAnimationFrame(frame);
+}
+Promise.all([
+  img.decode(),
+  document.fonts.load(font(100, false)), document.fonts.load(font(100, true), '節奏戰鼓響起威風動起來將軍出陣！，。'),
+  document.fonts.load(`500 20px ${F_MONO}`),
+].map(p => p.catch(() => {}))).then(() => { makeTints(); seek(0); frame(); });
+</script>
+</body>
+</html>
