@@ -40,7 +40,7 @@ def shot_path(outdir, i, tag):
     return os.path.join(outdir, "shots", f"{tag}_s{i:02d}.mp4")
 
 
-def render_shot(i, shot, srcdir, outdir, W, H, tag):
+def render_shot(i, shot, srcdir, outdir, W, H, tag, fill="blur"):
     src, a, b, speed, _ = shot
     # 不多渲染轉場的長度：xfade 會直接吃掉鏡頭尾端的 XFADE 秒。
     # 若在這裡多給 XFADE，影像每段前進 S-XFADE、聲音每段前進 S，
@@ -51,8 +51,14 @@ def render_shot(i, shot, srcdir, outdir, W, H, tag):
     if os.path.exists(path):
         return path
 
-    # 直式素材進橫式畫面：模糊放大版填兩側，原片等比置中
-    if W > H:
+    # 直式素材進橫式畫面，兩種做法：
+    #   blur = 原片等比置中、兩側用自己的模糊放大版填滿（完整保留畫面）
+    #   crop = 放大到滿版再裁成 16:9（畫面飽滿，但切掉上下）
+    if W > H and fill == "crop":
+        c = edl.CROP_Y[i] if i < len(edl.CROP_Y) else 0.5
+        fit = (f"scale={W}:-2,"
+               f"crop={W}:{H}:0:max(0\,min(ih-{H}\,ih*{c}-{H // 2}))")
+    elif W > H:
         fit = (f"split=2[bg][fg];"
                f"[bg]scale={W}:{H}:force_original_aspect_ratio=increase,"
                f"crop={W}:{H},boxblur=luma_radius=40:luma_power=2,"
@@ -170,7 +176,7 @@ def overlays(W, H, total):
     return ",".join(L)
 
 
-def build(srcdir, outdir, W, H, tag, relabel=False):
+def build(srcdir, outdir, W, H, tag, relabel=False, fill="blur"):
     """relabel=True：沿用既有的串接檔，只重做字卡（改字幕時用，省掉整輪重剪）。"""
     os.makedirs(os.path.join(outdir, "shots"), exist_ok=True)
     joined_exists = os.path.exists(os.path.join(outdir, f"joined_{tag}.mp4"))
@@ -178,7 +184,7 @@ def build(srcdir, outdir, W, H, tag, relabel=False):
     for i, sh in enumerate(edl.SHOTS):
         if not (relabel and joined_exists):
             print(f"  鏡頭 {i:02d}  {sh[0]}  {sh[1]:.1f}-{sh[2]:.1f}s  x{sh[3]}", flush=True)
-            paths.append(render_shot(i, sh, srcdir, outdir, W, H, tag))
+            paths.append(render_shot(i, sh, srcdir, outdir, W, H, tag, fill))
         offs.append(cur)
         cur += (sh[2] - sh[1]) / sh[3] - edl.XFADE
     body_len = cur + edl.XFADE
@@ -217,12 +223,16 @@ if __name__ == "__main__":
     ap.add_argument("--landscape", action="store_true")
     ap.add_argument("--relabel", action="store_true",
                     help="沿用既有串接檔，只重做字卡")
+    ap.add_argument("--fill", choices=["blur", "crop"], default="blur",
+                    help="橫式時直式素材怎麼填滿畫面：blur 模糊填邊 / crop 放大裁切")
     args = ap.parse_args()
     todo = []
     if args.portrait or not args.landscape:
         todo.append((1080, 1920, "直式1080x1920"))
     if args.landscape:
-        todo.append((1920, 1080, "橫式1920x1080"))
+        suffix = "裁切" if args.fill == "crop" else ""
+        todo.append((1920, 1080, f"橫式{suffix}1920x1080"))
     for W, H, tag in todo:
         print(f"== {tag} ==", flush=True)
-        print("完成：", build(args.src, args.out, W, H, tag, args.relabel), flush=True)
+        print("完成：", build(args.src, args.out, W, H, tag, args.relabel,
+                             args.fill), flush=True)
