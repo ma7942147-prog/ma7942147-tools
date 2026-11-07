@@ -98,7 +98,7 @@ def build_endcard(outdir, W, H, tag):
     layers = ",".join([
         dt(f"{e['temple']}　煙火", FONT_SERIF, big, f"h*0.36"),
         dt(f"{e['date']}（{e['weekday']}）", FONT_SANS, mid, f"h*0.47"),
-        dt(e["place"], FONT_SANS, mid, f"h*0.53"),
+        dt(e["place_full"], FONT_SANS, mid, "h*0.53"),
         dt(f"攝於 {e['shot_from']}–{e['shot_to']}", FONT_SANS, sml, "h*0.60",
            "white", "0.65"),
     ])
@@ -146,11 +146,11 @@ def overlays(W, H, total):
              f":fontcolor=white:alpha='{fade}':fontsize={big}"
              f":shadowcolor=black@0.7:shadowx=3:shadowy=3"
              f":x=(w-tw)/2:y=h*0.13")
-    sub_txt = f"{e['place']}　·　{e['date']}（{e['weekday']}）"
-    L.append(f"drawtext=font='{FONT_SANS}':text='{esc(sub_txt)}'"
-             f":fontcolor=white:alpha='{fade}':fontsize={sub}"
-             f":shadowcolor=black@0.7:shadowx=2:shadowy=2"
-             f":x=(w-tw)/2:y=h*0.13+{int(big*1.5)}")
+    for n, txt in enumerate([e["place_short"], f"{e['date']}（{e['weekday']}）"]):
+        L.append(f"drawtext=font='{FONT_SANS}':text='{esc(txt)}'"
+                 f":fontcolor=white:alpha='{fade}':fontsize={sub}"
+                 f":shadowcolor=black@0.7:shadowx=2:shadowy=2"
+                 f":x=(w-tw)/2:y=h*0.13+{int(big * 1.5 + n * sub * 1.45)}")
 
     # 時刻標：每當換到新的拍攝時間就在左下角帶出 3 秒
     chip = int(H * 0.019)
@@ -169,21 +169,28 @@ def overlays(W, H, total):
     return ",".join(L)
 
 
-def build(srcdir, outdir, W, H, tag):
+def build(srcdir, outdir, W, H, tag, relabel=False):
+    """relabel=True：沿用既有的串接檔，只重做字卡（改字幕時用，省掉整輪重剪）。"""
     os.makedirs(os.path.join(outdir, "shots"), exist_ok=True)
+    joined_exists = os.path.exists(os.path.join(outdir, f"joined_{tag}.mp4"))
     paths, offs, cur = [], [], 0.0
     for i, sh in enumerate(edl.SHOTS):
-        print(f"  鏡頭 {i:02d}  {sh[0]}  {sh[1]:.1f}-{sh[2]:.1f}s  x{sh[3]}", flush=True)
-        paths.append(render_shot(i, sh, srcdir, outdir, W, H, tag))
+        if not (relabel and joined_exists):
+            print(f"  鏡頭 {i:02d}  {sh[0]}  {sh[1]:.1f}-{sh[2]:.1f}s  x{sh[3]}", flush=True)
+            paths.append(render_shot(i, sh, srcdir, outdir, W, H, tag))
         offs.append(cur)
         cur += (sh[2] - sh[1]) / sh[3] - edl.XFADE
     body_len = cur + edl.XFADE
-    paths.append(build_endcard(outdir, W, H, tag))
+    if not (relabel and joined_exists):
+        paths.append(build_endcard(outdir, W, H, tag))
     offs.append(body_len - edl.XFADE)
 
-    print("  串接 ...", flush=True)
     joined = os.path.join(outdir, f"joined_{tag}.mp4")
-    xfade_chain(paths, offs, joined, W, H)
+    if os.path.exists(joined):
+        print("  串接檔已存在，沿用", flush=True)
+    else:
+        print("  串接 ...", flush=True)
+        xfade_chain(paths, offs, joined, W, H)
 
     print("  上字卡 ...", flush=True)
     total = body_len + edl.ENDCARD - edl.XFADE
@@ -194,9 +201,10 @@ def build(srcdir, outdir, W, H, tag):
          "-pix_fmt", "yuv420p", "-profile:v", "high", "-level", "4.2",
          "-movflags", "+faststart",
          "-c:a", "aac", "-b:a", "256k", "-ar", "48000", out])
-    os.remove(joined)
+    # joined 留著：只改字卡時可以直接重跑上字卡那一步，不用重剪
     for p in paths:
-        os.remove(p)
+        if os.path.exists(p):
+            os.remove(p)
     return out
 
 
@@ -206,6 +214,8 @@ if __name__ == "__main__":
     ap.add_argument("--out", required=True)
     ap.add_argument("--portrait", action="store_true")
     ap.add_argument("--landscape", action="store_true")
+    ap.add_argument("--relabel", action="store_true",
+                    help="沿用既有串接檔，只重做字卡")
     args = ap.parse_args()
     todo = []
     if args.portrait or not args.landscape:
@@ -214,4 +224,4 @@ if __name__ == "__main__":
         todo.append((1920, 1080, "橫式1920x1080"))
     for W, H, tag in todo:
         print(f"== {tag} ==", flush=True)
-        print("完成：", build(args.src, args.out, W, H, tag), flush=True)
+        print("完成：", build(args.src, args.out, W, H, tag, args.relabel), flush=True)
