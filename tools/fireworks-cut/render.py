@@ -42,10 +42,11 @@ def shot_path(outdir, i, tag):
 
 def render_shot(i, shot, srcdir, outdir, W, H, tag):
     src, a, b, speed, _ = shot
+    # 不多渲染轉場的長度：xfade 會直接吃掉鏡頭尾端的 XFADE 秒。
+    # 若在這裡多給 XFADE，影像每段前進 S-XFADE、聲音每段前進 S，
+    # 每接一次錯開 XFADE 秒，11 個鏡頭累積下來聲音會慢快 5 秒。
     dur = (b - a) / speed
-    if i < len(edl.SHOTS) - 1:
-        dur += edl.XFADE
-    src_dur = dur * speed
+    src_dur = b - a
     path = shot_path(outdir, i, tag)
     if os.path.exists(path):
         return path
