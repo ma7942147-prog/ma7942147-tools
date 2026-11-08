@@ -20,6 +20,7 @@
 - **edu-video-maker**：影音教學 Agent 工作室（腳本→語音→影片）
 - **mv-render**：歌詞 MV 合成器（歌 + 圖 + 影片 → 1080p MV），字幕時間碼由音檔分析推得，不會落後人聲；多專案共用引擎（`projects/<名稱>/`），目前有 one_and_only、moon
 - **fireworks-cut**：煙火／活動影片精華剪輯（自動用亮度尖峰找爆點 → 剪成帶字卡的精華片，可同時輸出直式與橫式）
+- **travel-reel**：照片＋影片 → IG 直式遊記短片（程式先篩技術面，再人工挑內容；Ken Burns montage）
 - **telegram-notifier**：共用的 Telegram 通知基礎設施（`/functions` + `tools/shared/telegram-notify.js`），部署步驟見 `tools/telegram-notifier/README.md`；bot 是 @ma7942147_bot
 
 ## 工作注意事項
