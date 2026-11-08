@@ -19,12 +19,21 @@ python3 burst.py <影片...>      # 列出每段的爆點與每 5 秒的強度
 
 ## 剪輯與輸出
 
-`edl.py` 是剪輯表（素材、進出點、速度、時刻標）與活動資訊；
-`render.py` 讀它產生成品。
+剪輯表（素材、進出點、速度、時刻標）與活動資訊放在 edl 模組，
+`render.py` 讀它產生成品。目前有兩份：
+
+| 剪輯表 | 長度 | 用途 |
+|---|---|---|
+| `edl.py`（預設） | 1 分 39 秒，11 鏡頭 | 完整敘事版，依時間順序，帶時刻標 |
+| `edl_ig.py` | 40 秒，7 鏡頭 | IG Reels 濃縮版，依爆點強度編排 |
+
+短版不照時間順序（按強度排），所以拿掉了時刻標——照標會變成
+20:30 → 20:32 → 20:31 跳來跳去。
 
 ```bash
 python3 render.py --src <素材夾> --out <輸出夾> --portrait --landscape
-python3 render.py --src ... --out ... --portrait --relabel   # 只改字卡，沿用串接檔
+python3 render.py --src ... --out ... --portrait --edl edl_ig  # 40 秒 IG 版
+python3 render.py --src ... --out ... --portrait --relabel     # 只改字卡，沿用串接檔
 ```
 
 串接好的 `joined_<比例>.mp4` 會留著。只改活動資訊或字卡樣式時加

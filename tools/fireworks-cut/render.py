@@ -13,7 +13,13 @@ import subprocess
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import edl
+
+# 剪輯表可以換：預設 edl.py（完整版），--edl edl_ig 換成 IG 短版
+_EDL = "edl"
+for _i, _a in enumerate(sys.argv):
+    if _a == "--edl" and _i + 1 < len(sys.argv):
+        _EDL = sys.argv[_i + 1].replace(".py", "")
+edl = __import__(_EDL)
 
 FONT_SANS = "Noto Sans CJK TC"
 FONT_SERIF = "Noto Serif CJK TC"
@@ -223,6 +229,7 @@ if __name__ == "__main__":
     ap.add_argument("--landscape", action="store_true")
     ap.add_argument("--relabel", action="store_true",
                     help="沿用既有串接檔，只重做字卡")
+    ap.add_argument("--edl", default="edl", help="剪輯表模組（edl 或 edl_ig）")
     ap.add_argument("--fill", choices=["blur", "crop"], default="blur",
                     help="橫式時直式素材怎麼填滿畫面：blur 模糊填邊 / crop 放大裁切")
     args = ap.parse_args()
