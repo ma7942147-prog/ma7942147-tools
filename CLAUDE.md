@@ -16,7 +16,7 @@
 
 ## 工具清單
 （之後加新工具時會自動更新）
-- **mv-creator**：MV 創作追蹤器（主題→歌詞→曲風→Suno→Grok 影片）
+- **mv-creator**：MV 創作追蹤器（主題→歌詞→曲風→Suno→Grok 影片）；`hook-clip/` 把 MV 剪成 9:16 短影音片段
 - **edu-video-maker**：影音教學 Agent 工作室（腳本→語音→影片）
 - **zili-atelier**：紫璃工坊 —— 固定角色模板的服裝／場景生圖器（單檔 HTML + Firebase 代理），部署見 `tools/zili-atelier/README.md`
 - **首頁 `index.html`**：Firebase Hosting 的工具總覽入口
