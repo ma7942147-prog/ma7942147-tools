@@ -1,0 +1,12 @@
+{
+  "schema": "character-card/v1",
+  "name": "紫璃",
+  "id": "zili",
+  "look": "a young woman, very long vivid purple hair with straight blunt bangs, cream-white satin headband with small pearl clips on the side, fair porcelain skin, soft round rosy blush on the cheeks, large gentle grey-brown eyes with long lashes, small nose, full glossy lips, thin silver chain necklace with a tiny heart pendant, slim tall figure, semi-realistic anime illustration, clean soft shading, cinematic soft lighting, high detail, 8k",
+  "outfit": "wearing a soft pale-yellow cotton t-shirt, high-waisted blue straight jeans",
+  "outfitLabel": "預設便服",
+  "style": "soft natural daylight, calm mood",
+  "negative": "no text, no watermark, no extra fingers, keep face / hair / headband identical to the locked character",
+  "videoPromptTemplate": "{look}, {outfit}, {shot}, {action}, {scene}, consistent character, no text, no watermark, no extra fingers, keep face / hair / headband identical to the locked character",
+  "referenceImage": "tools/zili-atelier/refs/full-body.jpg"
+}

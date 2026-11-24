@@ -177,6 +177,7 @@
           <button class="linkbtn" id="randomBtn">🎲 隨機</button>
           <button class="linkbtn" id="saveBtn">☆ 收藏</button>
           <button class="linkbtn" id="copyBtn">⧉ 複製提示詞</button>
+          <button class="linkbtn" id="cardBtn">🎬 匯出角色卡</button>
         </span>
       </div>
     </div>
@@ -834,6 +835,31 @@ $("clearAlbumBtn").onclick = async () => { await dbClear(); renderAlbum(); toast
 $("genBtn").onclick = generate;
 $("againBtn").onclick = generate;
 $("copyBtn").onclick = () => copyText(buildPrompt());
+// 角色卡：給影片流程（video-pipeline Skill）用的固定定妝描述
+function buildCard() {
+  const outfit = ["wearing", fragOf("top") + ",", fragOf("bottom")]
+    .concat(fragOf("shoes") ? ["with " + fragOf("shoes")] : []).join(" ");
+  return {
+    schema: "character-card/v1",
+    name: "紫璃",
+    id: "zili",
+    exportedAt: new Date().toISOString(),
+    look: config.lock,
+    outfit: outfit,
+    outfitLabel: ["top", "bottom", "shoes"].map(labelOf).join(" · "),
+    style: fragOf("mood"),
+    negative: config.negative,
+    videoPromptTemplate: "{look}, {outfit}, {shot}, {action}, {scene}, consistent character, " + config.negative,
+    referenceImage: lastImage ? "（請把剛生成的定妝圖另外下載，當作 image-to-video 的起始圖）" : "refs/full-body.jpg",
+    stillPrompt: buildPrompt(),
+  };
+}
+$("cardBtn").onclick = () => {
+  const card = buildCard();
+  const json = JSON.stringify(card, null, 2);
+  download("data:application/json;charset=utf-8," + encodeURIComponent(json), "zili-card.json");
+  copyText(json);
+};
 $("dlBtn").onclick = () => lastImage && download(lastImage.dataUrl, "zili.png");
 $("toAlbumBtn").onclick = () => goTab("album");
 $("randomBtn").onclick = () => {
